@@ -30,7 +30,7 @@ const TOP_POS = new THREE.Vector3(0, 44, 0.01);
 const TOP_TARGET = new THREE.Vector3(0, 0, 0);
 const EYE_HEIGHT = 1.7;
 const TRANSITION_SECONDS = 0.9;
-const FOLLOW_OFFSET = new THREE.Vector3(4.5, 3.2, 4.5);
+const FOLLOW_OFFSET = new THREE.Vector3(5.5, 5.0, 5.5); // 3.1: kamera di atas atap rumah (sebelumnya 4.5, 3.2, 4.5 — terhalang atap saat agent di perumahan).
 const WORLD_RADIUS = 42;
 
 function easeInOutCubic(t: number): number {

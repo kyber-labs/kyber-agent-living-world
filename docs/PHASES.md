@@ -66,6 +66,11 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   jalan cepat belum ada; berbicara = gestur meeting); status `error` sudah
   ada animasinya tapi TIDAK dipicu simulasi ambient — hanya untuk kegagalan
   engine di Phase 4.
+- Perbaikan 22 Nov (3.1): klik figur 3D gagal 4/4 di verifikasi live —
+  target klik diperbesar (label di atas kepala ikut jadi target raycast +
+  silinder klik tak terlihat r 0,6 di sekeliling tubuh); kamera follow
+  dinaikkan (offset 5,5/5,0/5,5) supaya tidak terhalang atap rumah;
+  pose working/resting/meeting dibuat lebih terbaca dari jauh.
 
 ## Phase 4 — AI Agent Engine, integrasi model AI, task management
 - Engine + integrasi LLM (OpenAI/Anthropic/Gemini — BUTUH keputusan API key

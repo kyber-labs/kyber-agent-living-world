@@ -131,7 +131,7 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
 
   // Karakter agent 3D + behavior ambient (Phase 3).
   const characters = new Map<string, AgentCharacter>();
-  const hitMeshes: THREE.Mesh[] = [];
+  const hitTargets: THREE.Object3D[] = [];
   let selectedId: string | null = null;
   const liveState = new Map<string, { status: AgentStatus; location: string }>();
   const initialPositions = agents.map((agent, i) => {
@@ -143,7 +143,7 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     const pos = initialPositions[i];
     character.setPosition(pos.x, pos.z, Math.atan2(-pos.x, -pos.z));
     characters.set(agent.id, character);
-    hitMeshes.push(...character.getHitMeshes());
+    hitTargets.push(...character.getHitTargets());
     liveState.set(agent.id, { status: 'idle', location: 'Plaza' });
     scene.add(character.group);
   });
@@ -198,7 +198,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     getFirstAgentId: () => agents[0]?.id ?? null,
   });
 
-  // Klik (bukan drag orbit): raycast ke penanda agent.
+  // Klik (bukan drag orbit): raycast ke target klik agent — tubuh, silinder
+  // klik tak terlihat, dan label nama (Phase 3.1: target diperbesar supaya
+  // figur yang sedang berjalan tetap mudah diklik).
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   let downX = 0;
@@ -213,9 +215,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects(hitMeshes, false);
+    const hits = raycaster.intersectObjects(hitTargets, false);
     if (hits.length > 0) {
-      const hit = hits[0].object as THREE.Mesh;
+      const hit = hits[0].object as THREE.Object3D;
       onSelectAgent((hit.userData.agentId as string | undefined) ?? null);
     } else {
       onSelectAgent(null);

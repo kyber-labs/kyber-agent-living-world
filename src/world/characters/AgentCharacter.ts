@@ -175,6 +175,18 @@ export class AgentCharacter {
     const label = this.makeLabelSprite();
     label.position.y = 2.05;
     this.group.add(label);
+
+    // Silinder klik tak terlihat — target klik jauh lebih besar dari tubuh
+    // (r 0,6, tinggi 2,2), supaya figur yang sedang berjalan tetap mudah
+    // diklik (perbaikan 3.1: klik figur 3D gagal 4/4 di verifikasi live).
+    // Material tidak menulis warna maupun kedalaman: murni proxy raycast.
+    const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+    hitMat.colorWrite = false;
+    const hitCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 2.2, 12), hitMat);
+    hitCyl.position.y = 1.1;
+    hitCyl.userData.agentId = agent.id;
+    this.group.add(hitCyl);
+
     this.group.traverse((obj) => {
       if (obj instanceof THREE.Mesh) obj.userData.agentId = agent.id;
     });
@@ -241,10 +253,11 @@ export class AgentCharacter {
     this.group.rotation.y = yaw;
   }
 
-  getHitMeshes(): THREE.Mesh[] {
-    const out: THREE.Mesh[] = [];
+  /** Target raycast untuk klik: semua mesh tubuh + silinder klik + label. */
+  getHitTargets(): THREE.Object3D[] {
+    const out: THREE.Object3D[] = [];
     this.group.traverse((obj) => {
-      if (obj instanceof THREE.Mesh) out.push(obj);
+      if (obj instanceof THREE.Mesh || obj instanceof THREE.Sprite) out.push(obj);
     });
     return out;
   }
@@ -273,18 +286,22 @@ export class AgentCharacter {
       this.torso.rotation.x = 0.08;
       baseY = Math.abs(Math.cos(this.walkPhase)) * 0.05;
     } else if (s === 'working') {
-      this.armL.rotation.x = -1.1 + Math.sin(t * 8) * 0.06;
-      this.armR.rotation.x = -1.1 + Math.sin(t * 8 + 1) * 0.06;
-      this.head.rotation.x = 0.25;
-      this.torso.rotation.x = 0.06;
+      // Mengetik: lengan ke depan (laptop/notebook di tangan kanan ikut
+      // terangkat), kepala menunduk, badan condong — terbaca dari jauh.
+      this.armL.rotation.x = -1.15 + Math.sin(t * 8) * 0.12;
+      this.armR.rotation.x = -1.15 + Math.sin(t * 8 + 1) * 0.12;
+      this.head.rotation.x = 0.35;
+      this.torso.rotation.x = 0.12;
     } else if (s === 'thinking') {
       this.armR.rotation.x = -1.9;
       this.armR.rotation.z = -0.4;
       this.head.rotation.z = 0.15;
       this.head.rotation.y = Math.sin(t * 0.7) * 0.2;
     } else if (s === 'meeting') {
-      this.armR.rotation.x = -0.9 + Math.sin(t * 3) * 0.25;
-      this.head.rotation.x = Math.sin(t * 2.2) * 0.08;
+      // Gestur bicara besar + angguk, supaya pasangan yang meeting terbaca.
+      this.armR.rotation.x = -0.9 + Math.sin(t * 3) * 0.4;
+      this.armL.rotation.x = -0.5 + Math.sin(t * 3 + 1) * 0.2;
+      this.head.rotation.x = Math.sin(t * 2.2) * 0.12;
     } else if (s === 'celebrating') {
       this.armL.rotation.x = -2.6;
       this.armR.rotation.x = -2.6;
@@ -292,11 +309,13 @@ export class AgentCharacter {
       this.armR.rotation.z = -0.35;
       baseY = Math.max(0, Math.sin(t * 5)) * 0.15;
     } else if (s === 'resting') {
+      // Duduk: kaki terlipat, badan lebih rendah + condong ke belakang.
       this.legL.rotation.x = -1.5;
       this.legR.rotation.x = -1.5;
-      this.torso.position.y = 0.3;
-      this.armL.rotation.x = -0.7;
-      this.armR.rotation.x = -0.7;
+      this.torso.position.y = 0.22;
+      this.torso.rotation.x = -0.15;
+      this.armL.rotation.x = -0.9;
+      this.armR.rotation.x = -0.9;
       this.head.rotation.x = 0.15;
     } else if (s === 'error') {
       this.head.rotation.y = Math.sin(t * 10) * 0.3;
