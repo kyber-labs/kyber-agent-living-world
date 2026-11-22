@@ -42,6 +42,9 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   Overview, HUD menampilkan "Fase 2/7 — Dunia & Kamera".
 - Verifikasi: `npm run build` (tsc + vite) lulus, dev server HTTP 200,
   preview build HTTP 200.
+- Perbaikan 22 Nov (2.1): tombol Reset kamera tidak mengembalikan posisi
+  setelah pan via minimap — penyebab `setMode` early-return saat mode sudah
+  Overview; diperbaiki dengan menghapus early-return itu.
 
 ## Phase 3 — Karakter agent 3D, animasi, navigasi
 - Karakter per agent (bukan kapsul), animasi §8: berjalan, berlari, duduk,

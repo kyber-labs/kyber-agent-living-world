@@ -82,7 +82,10 @@ export class CameraDirector {
   }
 
   setMode(mode: CameraMode): void {
-    if (mode === this.mode && !this.transition) return;
+    // Sengaja TANPA early-return saat mode sama: memilih ulang Overview/Top/
+    // First Person harus memulai ulang transisi ke posisi awal mode itu —
+    // itulah yang membuat tombol "Reset kamera" bekerja setelah pandangan
+    // digeser lewat minimap (bug Phase 2, 22 Nov 2026).
     this.mode = mode;
     this.controls.enabled = false;
     if (mode === 'follow') {
