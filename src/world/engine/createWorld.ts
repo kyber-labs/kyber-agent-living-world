@@ -1,6 +1,8 @@
 // Game world engine — MASTER PROMPT §3 (dunia dasar) + §4 (kamera).
 // Phase 1: engine boot yang benar-benar jalan — langit siang, tanah, cahaya,
 // orbit controls, dan penanda agent sementara (kapsul berwarna + nama).
+// Phase 2: kawasan kota (kantor 6 lantai, arena, hiburan, 10 rumah, taman,
+// jalan, alam) + director lima mode kamera + minimap.
 //
 // PENANDA SEMENTARA: figur di sini BUKAN karakter final. Karakter 3D lengkap
 // (animasi berjalan/duduk/mengetik, pakaian per peran) adalah Phase 3.
@@ -10,11 +12,26 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Agent } from '../../types/agent';
 import { createWorldClock } from '../../simulation/clock';
+import { buildCity, type CityInfo } from '../buildings/city';
+import { CameraDirector, type CameraMode, type CameraState } from '../camera/CameraDirector';
+
+export interface AgentPosition {
+  id: string;
+  x: number;
+  z: number;
+  color: string;
+  selected: boolean;
+}
 
 export interface WorldHandle {
   dispose: () => void;
   resetCamera: () => void;
   selectAgent: (id: string | null) => void;
+  setCameraMode: (mode: CameraMode) => void;
+  getCameraState: () => CameraState;
+  getCityInfo: () => CityInfo;
+  getAgentPositions: () => AgentPosition[];
+  focusPoint: (x: number, z: number) => void;
 }
 
 export interface WorldOptions {
@@ -53,6 +70,7 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   const clock = createWorldClock();
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.domElement.classList.add('world-gl');
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
@@ -122,9 +140,13 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   plaza.receiveShadow = true;
   scene.add(plaza);
 
+  // Kawasan virtual Phase 2 (MASTER PROMPT §3).
+  const city = buildCity(scene);
+
   // Penanda agent sementara (lihat catatan di atas file).
   const markers = new Map<string, THREE.Group>();
   const hitMeshes: THREE.Mesh[] = [];
+  let selectedId: string | null = null;
   const skin = new THREE.MeshStandardMaterial({ color: 0xf2c9a0, roughness: 0.7 });
   agents.forEach((agent, i) => {
     const angle = (i / agents.length) * Math.PI * 2;
@@ -174,6 +196,7 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   scene.add(ring);
 
   function selectAgent(id: string | null): void {
+    selectedId = id;
     if (id === null) {
       ring.visible = false;
       return;
@@ -185,6 +208,16 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     (ring.material as THREE.MeshBasicMaterial).color.set(agent.color);
     ring.visible = true;
   }
+
+  // Director lima mode kamera (MASTER PROMPT §4).
+  const director = new CameraDirector(camera, controls, renderer.domElement, {
+    getAgentPosition: (id) => {
+      const g = markers.get(id);
+      return g ? { x: g.position.x, z: g.position.z } : null;
+    },
+    getFollowTargetId: () => selectedId,
+    getFirstAgentId: () => agents[0]?.id ?? null,
+  });
 
   // Klik (bukan drag orbit): raycast ke penanda agent.
   const raycaster = new THREE.Raycaster();
@@ -221,17 +254,22 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   });
   resizeObserver.observe(container);
 
+  let lastNow = performance.now();
   renderer.setAnimationLoop(() => {
+    const now = performance.now();
+    const dt = Math.min((now - lastNow) / 1000, 0.05);
+    lastNow = now;
     const t = clock.elapsed();
     markers.forEach((group) => {
       group.position.y = Math.sin(t * 1.4 + (group.userData.phase as number)) * 0.03;
     });
-    controls.update();
+    director.update(dt);
     renderer.render(scene, camera);
   });
 
   function dispose(): void {
     renderer.setAnimationLoop(null);
+    director.dispose();
     resizeObserver.disconnect();
     renderer.domElement.removeEventListener('pointerdown', onPointerDown);
     renderer.domElement.removeEventListener('pointerup', onPointerUp);
@@ -252,10 +290,27 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   }
 
   function resetCamera(): void {
-    camera.position.copy(CAMERA_HOME);
-    controls.target.copy(TARGET_HOME);
-    controls.update();
+    director.reset();
   }
 
-  return { dispose, resetCamera, selectAgent };
+  return {
+    dispose,
+    resetCamera,
+    selectAgent,
+    setCameraMode: (mode: CameraMode) => director.setMode(mode),
+    getCameraState: () => director.getState(),
+    getCityInfo: () => city.info,
+    getAgentPositions: () =>
+      agents.map((a) => {
+        const g = markers.get(a.id);
+        return {
+          id: a.id,
+          x: g?.position.x ?? 0,
+          z: g?.position.z ?? 0,
+          color: a.color,
+          selected: selectedId === a.id,
+        };
+      }),
+    focusPoint: (x: number, z: number) => director.panTo(x, z),
+  };
 }

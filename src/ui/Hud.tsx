@@ -13,7 +13,7 @@ export function Hud({ agents, dbConfigured }: Props) {
       <span>{agents.length} agent</span>
       <span>{idle} menganggur</span>
       <span>{working} bekerja</span>
-      <span>Fase 1/7 — Setup</span>
+      <span>Fase 2/7 — Dunia &amp; Kamera</span>
       <span>Database: {dbConfigured ? 'terhubung' : 'belum dikonfigurasi'}</span>
     </footer>
   );

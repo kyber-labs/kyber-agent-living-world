@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createWorld, type WorldHandle } from '../world/engine/createWorld';
+import { Minimap } from './Minimap';
 import type { Agent } from '../types/agent';
 
 interface Props {
@@ -37,5 +38,9 @@ export function WorldView({ agents, selectedId, onSelect, worldHandle }: Props) 
     worldHandle.current?.selectAgent(selectedId);
   }, [selectedId, worldHandle]);
 
-  return <div ref={containerRef} className="world-canvas" aria-label="Dunia 3D" />;
+  return (
+    <div ref={containerRef} className="world-canvas" aria-label="Dunia 3D">
+      <Minimap worldHandle={worldHandle} />
+    </div>
+  );
 }

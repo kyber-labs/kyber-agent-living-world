@@ -19,13 +19,29 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
 - UI shell yang berfungsi: daftar 10 agent, panel detail, HUD (jumlah agent,
   status, fase, status database). Tidak ada tombol dekoratif tanpa fungsi.
 - `.env.example`, `docs/SETUP.md`, `docs/PHASES.md`, README.
-- Verifikasi: `npm run build` (tsc + vite) lulus, dev server HTTP 200.
+- Verifikasi: `npm run build` (tsc + vite) lulus, dev server HTTP 200,
+  preview build HTTP 200, live terverifikasi 22 Nov 05:58 di
+  https://kyber-agent-living-world.vercel.app/ (repo
+  `kyber-labs/kyber-agent-living-world`).
 
-## Phase 2 — Dunia 3D dasar, gedung kantor, sistem kamera ⏳ BERIKUTNYA
-- Kawasan virtual §3: gedung kantor pusat, arena olahraga, plaza & taman,
-  hiburan, residensial, transportasi, alam.
-- Mode kamera §4: Overview, Top View, First Person, Follow Agent, Cinematic
-  + minimap 2D + transisi halus.
+## Phase 2 — Dunia 3D dasar, gedung kantor, sistem kamera ✅ SELESAI (22 Nov 2026)
+- Kawasan virtual §3 (`src/world/buildings/city.ts`): gedung kantor pusat
+  6 lantai (fasad jendela, pintu masuk, antena), arena olahraga (dinding
+  melingkar, lapangan, 4 lampu sorot), panggung hiburan (layar + bangku),
+  10 rumah dua baris (atap limas, warna beda), taman (pepohonan + bangku),
+  jalan salib bermarka, pepohonan + bebatuan alam di tepi kota. Semua
+  geometri nyata dengan bayangan.
+- Mode kamera §4 (`src/world/camera/CameraDirector.ts`): Overview (orbit),
+  Top View (dari atas), First Person (WASD/panah + seret untuk melihat,
+  tinggi mata 1,7), Follow Agent (mengikuti agent terpilih), Cinematic
+  (orbit otomatis pelan) — semuanya dengan transisi halus (~0,9 dtk).
+- Minimap 2D (`src/components/Minimap.tsx`): jalan, plaza, bangunan,
+  pepohonan, titik agent + cincin terpilih, panah arah kamera; klik minimap
+  menggeser pandangan (mode Overview/Top).
+- UI: toolbar 5 mode kamera di atas canvas, tombol Reset kamera kembali ke
+  Overview, HUD menampilkan "Fase 2/7 — Dunia & Kamera".
+- Verifikasi: `npm run build` (tsc + vite) lulus, dev server HTTP 200,
+  preview build HTTP 200.
 
 ## Phase 3 — Karakter agent 3D, animasi, navigasi
 - Karakter per agent (bukan kapsul), animasi §8: berjalan, berlari, duduk,
@@ -51,6 +67,6 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   pengujian yang jujur.
 
 ## Backlog transparan (belum ada — jangan diklaim berfungsi)
-- Mode kamera selain orbit, minimap, bangunan/kawasan, karakter final,
-  animasi status, AI engine, task management, meeting, life sim, olahraga,
-  world builder, analytics, mode gelap, database live, autentikasi.
+- Karakter final, animasi status, AI engine, task management, meeting,
+  life sim, olahraga, world builder, analytics, mode gelap, database live,
+  autentikasi.
