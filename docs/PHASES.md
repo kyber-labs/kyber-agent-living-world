@@ -71,6 +71,12 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   silinder klik tak terlihat r 0,6 di sekeliling tubuh); kamera follow
   dinaikkan (offset 5,5/5,0/5,5) supaya tidak terhalang atap rumah;
   pose working/resting/meeting dibuat lebih terbaca dari jauh.
+- Perbaikan 22 Nov (3.2): label sprite ternyata TIDAK membawa agentId
+  (traverse hanya memberi ke Mesh) sehingga klik label membatalkan pilihan
+  — diperbaiki; ambang drag klik dilonggarkan 6→10px; Overview DILEBARKAN
+  (posisi awal (14,10,14)→(0,40,75) dari sisi selatan + kabut 55–120→
+  90–180) supaya seluruh kota termasuk deret rumah selatan terlihat;
+  trade-off: agent terlihat lebih kecil dari tampilan Overview.
 
 ## Phase 4 — AI Agent Engine, integrasi model AI, task management
 - Engine + integrasi LLM (OpenAI/Anthropic/Gemini — BUTUH keputusan API key

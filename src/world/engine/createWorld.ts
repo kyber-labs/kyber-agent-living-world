@@ -48,7 +48,7 @@ export interface WorldOptions {
   onAgentState?: (id: string, status: AgentStatus, location: string) => void;
 }
 
-const CAMERA_HOME = new THREE.Vector3(14, 10, 14);
+const CAMERA_HOME = new THREE.Vector3(0, 40, 75);
 const TARGET_HOME = new THREE.Vector3(0, 0.8, 0);
 
 export function createWorld(container: HTMLDivElement, options: WorldOptions): WorldHandle {
@@ -67,7 +67,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xbfd9f2);
-  scene.fog = new THREE.Fog(0xbfd9f2, 55, 120);
+  // 3.2: kabut digeser (90–180) karena kamera Overview kini jauh (75 unit)
+  // — kota (jarak 55–97) tetap jernih, hanya tepi tanah yang memudar.
+  scene.fog = new THREE.Fog(0xbfd9f2, 90, 180);
 
   const camera = new THREE.PerspectiveCamera(
     48,
@@ -210,7 +212,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     downY = e.clientY;
   }
   function onPointerUp(e: PointerEvent): void {
-    if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) return;
+    // Ambang 10px (3.2; sebelumnya 6): klik yang sedikit menggeser kamera
+    // tetap dihitung klik, bukan drag orbit.
+    if (Math.hypot(e.clientX - downX, e.clientY - downY) > 10) return;
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;

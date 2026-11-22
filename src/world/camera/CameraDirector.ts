@@ -24,7 +24,7 @@ export interface DirectorOptions {
   getFirstAgentId: () => string | null;
 }
 
-const OVERVIEW_POS = new THREE.Vector3(14, 10, 14);
+const OVERVIEW_POS = new THREE.Vector3(0, 40, 75); // 3.2: dari sisi selatan, jauh + tinggi — seluruh kota termasuk deret rumah selatan masuk frame (sebelumnya 14,10,14: rumah selatan di luar sudut pandang).
 const OVERVIEW_TARGET = new THREE.Vector3(0, 0.8, 0);
 const TOP_POS = new THREE.Vector3(0, 44, 0.01);
 const TOP_TARGET = new THREE.Vector3(0, 0, 0);

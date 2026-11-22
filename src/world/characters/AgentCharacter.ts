@@ -174,6 +174,10 @@ export class AgentCharacter {
     // Label nama + peran + status.
     const label = this.makeLabelSprite();
     label.position.y = 2.05;
+    // 3.2: label ikut jadi target klik — WAJIB bawa agentId. Sebelumnya
+    // traverse hanya memberi agentId ke Mesh, sehingga klik label
+    // mengembalikan undefined dan membatalkan pilihan.
+    label.userData.agentId = agent.id;
     this.group.add(label);
 
     // Silinder klik tak terlihat — target klik jauh lebih besar dari tubuh

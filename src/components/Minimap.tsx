@@ -73,7 +73,11 @@ export function Minimap({ worldHandle }: Props) {
               }
             });
             const cam = handle.getCameraState();
-            const [cx, cz] = toMap(cam.x, cam.z);
+            // 3.2: kamera Overview kini di (0,75) — di luar batas peta (±45).
+            // Jepit panah ke tepi kanvas supaya tetap terlihat.
+            const [cxRaw, czRaw] = toMap(cam.x, cam.z);
+            const cx = Math.max(6, Math.min(SIZE - 6, cxRaw));
+            const cz = Math.max(6, Math.min(SIZE - 6, czRaw));
             ctx.save();
             ctx.translate(cx, cz);
             ctx.rotate(cam.heading);
