@@ -1,13 +1,14 @@
-import type { Agent } from '../types/agent';
+import type { Agent, LiveAgentState } from '../types/agent';
 import { STATUS_LABEL } from '../types/agent';
 
 interface Props {
   agents: Agent[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  liveStates: LiveAgentState;
 }
 
-export function AgentList({ agents, selectedId, onSelect }: Props) {
+export function AgentList({ agents, selectedId, onSelect, liveStates }: Props) {
   return (
     <aside className="sidebar">
       <h2>Agent ({agents.length})</h2>
@@ -24,7 +25,9 @@ export function AgentList({ agents, selectedId, onSelect }: Props) {
                 <span className="agent-name">{agent.name}</span>
                 <span className="agent-role">{agent.role}</span>
               </span>
-              <span className="agent-status">{STATUS_LABEL[agent.status]}</span>
+              <span className="agent-status">
+                {STATUS_LABEL[liveStates[agent.id]?.status ?? agent.status]}
+              </span>
             </button>
           </li>
         ))}

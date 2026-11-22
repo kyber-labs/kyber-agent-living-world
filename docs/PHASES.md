@@ -50,6 +50,22 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
 - Karakter per agent (bukan kapsul), animasi §8: berjalan, berlari, duduk,
   mengetik, berbicara, berpikir, merayakan; pakaian sesuai peran; nama/peran/
   status di atas kepala.
+- **SELESAI 22 Nov:** humanoid low-poly dari primitif (kaki/torso/lengan/
+  kepala/rambut — gaya rambut + warna kulit bervariasi, prop peran: laptop
+  Kai & Max, notebook Aria/Zoe/Mia, perkakas Leo & Rex, palet Luna, headset
+  Finn & Nova); label di atas kepala menampilkan nama + peran + titik status
+  (diperbarui saat status berubah). Animasi prosedural: idle (napas),
+  moving (langkah kaki + ayun lengan, 2,2 unit/dtk), working (mengetik),
+  thinking (tangan ke dagu), meeting (gestur bicara + angguk), celebrating
+  (lengan ke atas + lompat), resting (duduk), error (geleng kepala).
+  Graf navigasi 11 simpul (plaza, jalan, depan tiap kawasan) + BFS; behavior
+  ambient: jalan ke kawasan acak, diam dengan aktivitas acak, meeting bila
+  bertemu agent lain yang sedang diam. Status + lokasi live masuk sidebar,
+  panel detail, dan HUD. `npm run build` lulus, dev + preview HTTP 200.
+- Catatan: animasi **berlari** dan **berbicara** belum dipisah (berlari =
+  jalan cepat belum ada; berbicara = gestur meeting); status `error` sudah
+  ada animasinya tapi TIDAK dipicu simulasi ambient — hanya untuk kegagalan
+  engine di Phase 4.
 
 ## Phase 4 — AI Agent Engine, integrasi model AI, task management
 - Engine + integrasi LLM (OpenAI/Anthropic/Gemini — BUTUH keputusan API key
@@ -70,6 +86,6 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   pengujian yang jujur.
 
 ## Backlog transparan (belum ada — jangan diklaim berfungsi)
-- Karakter final, animasi status, AI engine, task management, meeting,
-  life sim, olahraga, world builder, analytics, mode gelap, database live,
-  autentikasi.
+- AI engine, task management, meeting room, life sim, olahraga, world
+  builder, analytics, mode gelap, database live, autentikasi, animasi
+  berlari dan berbicara yang terpisah.

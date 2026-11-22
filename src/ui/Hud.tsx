@@ -1,19 +1,21 @@
-import type { Agent } from '../types/agent';
+import type { Agent, LiveAgentState } from '../types/agent';
 
 interface Props {
   agents: Agent[];
+  liveStates: LiveAgentState;
   dbConfigured: boolean;
 }
 
-export function Hud({ agents, dbConfigured }: Props) {
-  const idle = agents.filter((a) => a.status === 'idle').length;
-  const working = agents.filter((a) => a.status === 'working').length;
+export function Hud({ agents, liveStates, dbConfigured }: Props) {
+  const states = agents.map((a) => liveStates[a.id]?.status ?? a.status);
+  const idle = states.filter((s) => s === 'idle').length;
+  const working = states.filter((s) => s === 'working').length;
   return (
     <footer className="hud">
       <span>{agents.length} agent</span>
       <span>{idle} menganggur</span>
       <span>{working} bekerja</span>
-      <span>Fase 2/7 — Dunia &amp; Kamera</span>
+      <span>Fase 3/7 — Karakter &amp; Navigasi</span>
       <span>Database: {dbConfigured ? 'terhubung' : 'belum dikonfigurasi'}</span>
     </footer>
   );

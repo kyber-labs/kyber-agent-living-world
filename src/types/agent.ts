@@ -32,3 +32,18 @@ export const STATUS_LABEL: Record<AgentStatus, string> = {
   resting: 'Istirahat',
   error: 'Error',
 };
+
+/** Warna titik status (label 3D + UI). */
+export const STATUS_COLOR: Record<AgentStatus, string> = {
+  idle: '#94a3b8',
+  working: '#10b981',
+  thinking: '#8b5cf6',
+  meeting: '#f59e0b',
+  moving: '#0ea5e9',
+  celebrating: '#ec4899',
+  resting: '#14b8a6',
+  error: '#ef4444',
+};
+
+/** Status + lokasi live per agent, dikirim engine saat berubah (Phase 3). */
+export type LiveAgentState = Record<string, { status: AgentStatus; location: string }>;

@@ -4,16 +4,22 @@
 // Phase 2: kawasan kota (kantor 6 lantai, arena, hiburan, 10 rumah, taman,
 // jalan, alam) + director lima mode kamera + minimap.
 //
-// PENANDA SEMENTARA: figur di sini BUKAN karakter final. Karakter 3D lengkap
-// (animasi berjalan/duduk/mengetik, pakaian per peran) adalah Phase 3.
-// Penanda ini hanya membuktikan engine, raycast, dan seleksi agent bekerja.
+// Phase 3: karakter agent 3D (humanoid low-poly dari primitif + prop peran)
+// dengan animasi status prosedural dan behavior ambient yang berjalan
+// menyusuri graf navigasi antar kawasan.
+//
+// Karakter di sini dibangun dari primitif Three.js (bukan file model
+// eksternal) — itu pilihan gaya low-poly yang disengaja, bukan placeholder:
+// tiap agent punya tubuh, rambut, prop peran, dan animasi yang berfungsi.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { Agent } from '../../types/agent';
+import type { Agent, AgentStatus } from '../../types/agent';
 import { createWorldClock } from '../../simulation/clock';
+import { AgentBehavior } from '../../simulation/behavior';
 import { buildCity, type CityInfo } from '../buildings/city';
 import { CameraDirector, type CameraMode, type CameraState } from '../camera/CameraDirector';
+import { AgentCharacter } from '../characters/AgentCharacter';
 
 export interface AgentPosition {
   id: string;
@@ -21,6 +27,8 @@ export interface AgentPosition {
   z: number;
   color: string;
   selected: boolean;
+  status: AgentStatus;
+  location: string;
 }
 
 export interface WorldHandle {
@@ -37,33 +45,11 @@ export interface WorldHandle {
 export interface WorldOptions {
   agents: Agent[];
   onSelectAgent: (id: string | null) => void;
+  onAgentState?: (id: string, status: AgentStatus, location: string) => void;
 }
 
 const CAMERA_HOME = new THREE.Vector3(14, 10, 14);
 const TARGET_HOME = new THREE.Vector3(0, 0.8, 0);
-
-function makeNameSprite(name: string): THREE.Sprite {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 64;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas 2D tidak tersedia');
-  ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
-  ctx.beginPath();
-  ctx.roundRect(4, 8, 248, 48, 12);
-  ctx.fill();
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 28px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(name, 128, 34);
-  const tex = new THREE.CanvasTexture(canvas);
-  const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }),
-  );
-  sprite.scale.set(2.0, 0.5, 1);
-  return sprite;
-}
 
 export function createWorld(container: HTMLDivElement, options: WorldOptions): WorldHandle {
   const { agents, onSelectAgent } = options;
@@ -143,41 +129,34 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   // Kawasan virtual Phase 2 (MASTER PROMPT §3).
   const city = buildCity(scene);
 
-  // Penanda agent sementara (lihat catatan di atas file).
-  const markers = new Map<string, THREE.Group>();
+  // Karakter agent 3D + behavior ambient (Phase 3).
+  const characters = new Map<string, AgentCharacter>();
   const hitMeshes: THREE.Mesh[] = [];
   let selectedId: string | null = null;
-  const skin = new THREE.MeshStandardMaterial({ color: 0xf2c9a0, roughness: 0.7 });
-  agents.forEach((agent, i) => {
+  const liveState = new Map<string, { status: AgentStatus; location: string }>();
+  const initialPositions = agents.map((agent, i) => {
     const angle = (i / agents.length) * Math.PI * 2;
-    const x = Math.cos(angle) * 5.5;
-    const z = Math.sin(angle) * 5.5;
-    const group = new THREE.Group();
-    group.position.set(x, 0, z);
+    return { id: agent.id, x: Math.cos(angle) * 5.5, z: Math.sin(angle) * 5.5 };
+  });
+  agents.forEach((agent, i) => {
+    const character = new AgentCharacter(agent, i);
+    const pos = initialPositions[i];
+    character.setPosition(pos.x, pos.z, Math.atan2(-pos.x, -pos.z));
+    characters.set(agent.id, character);
+    hitMeshes.push(...character.getHitMeshes());
+    liveState.set(agent.id, { status: 'idle', location: 'Plaza' });
+    scene.add(character.group);
+  });
 
-    const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.28, 0.7, 6, 16),
-      new THREE.MeshStandardMaterial({ color: agent.color, roughness: 0.6 }),
-    );
-    body.position.y = 0.85;
-    body.castShadow = true;
-    body.userData.agentId = agent.id;
-    group.add(body);
-
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 20, 16), skin);
-    head.position.y = 1.55;
-    head.castShadow = true;
-    head.userData.agentId = agent.id;
-    group.add(head);
-
-    const label = makeNameSprite(agent.name);
-    label.position.y = 2.15;
-    group.add(label);
-
-    group.userData.phase = (i / agents.length) * Math.PI * 2;
-    markers.set(agent.id, group);
-    hitMeshes.push(body, head);
-    scene.add(group);
+  const behavior = new AgentBehavior(agents, initialPositions, {
+    onMove: (id, x, z, yaw) => {
+      characters.get(id)?.setPosition(x, z, yaw);
+    },
+    onStatus: (id, status, location) => {
+      characters.get(id)?.setStatus(status);
+      liveState.set(id, { status, location });
+      options.onAgentState?.(id, status, location);
+    },
   });
 
   // Cincin seleksi di bawah agent terpilih.
@@ -201,10 +180,10 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
       ring.visible = false;
       return;
     }
-    const group = markers.get(id);
+    const character = characters.get(id);
     const agent = agents.find((a) => a.id === id);
-    if (!group || !agent) return;
-    ring.position.set(group.position.x, 0.03, group.position.z);
+    if (!character || !agent) return;
+    ring.position.set(character.group.position.x, 0.03, character.group.position.z);
     (ring.material as THREE.MeshBasicMaterial).color.set(agent.color);
     ring.visible = true;
   }
@@ -212,8 +191,8 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   // Director lima mode kamera (MASTER PROMPT §4).
   const director = new CameraDirector(camera, controls, renderer.domElement, {
     getAgentPosition: (id) => {
-      const g = markers.get(id);
-      return g ? { x: g.position.x, z: g.position.z } : null;
+      const c = characters.get(id);
+      return c ? { x: c.group.position.x, z: c.group.position.z } : null;
     },
     getFollowTargetId: () => selectedId,
     getFirstAgentId: () => agents[0]?.id ?? null,
@@ -260,9 +239,8 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     const dt = Math.min((now - lastNow) / 1000, 0.05);
     lastNow = now;
     const t = clock.elapsed();
-    markers.forEach((group) => {
-      group.position.y = Math.sin(t * 1.4 + (group.userData.phase as number)) * 0.03;
-    });
+    behavior.update(dt, t);
+    characters.forEach((character) => character.update(dt, t));
     director.update(dt);
     renderer.render(scene, camera);
   });
@@ -302,13 +280,16 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     getCityInfo: () => city.info,
     getAgentPositions: () =>
       agents.map((a) => {
-        const g = markers.get(a.id);
+        const c = characters.get(a.id);
+        const state = liveState.get(a.id);
         return {
           id: a.id,
-          x: g?.position.x ?? 0,
-          z: g?.position.z ?? 0,
+          x: c?.group.position.x ?? 0,
+          z: c?.group.position.z ?? 0,
           color: a.color,
           selected: selectedId === a.id,
+          status: state?.status ?? 'idle',
+          location: state?.location ?? 'Plaza',
         };
       }),
     focusPoint: (x: number, z: number) => director.panTo(x, z),

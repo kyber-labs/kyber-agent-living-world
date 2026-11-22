@@ -1,21 +1,24 @@
 import { useEffect, useRef } from 'react';
 import { createWorld, type WorldHandle } from '../world/engine/createWorld';
 import { Minimap } from './Minimap';
-import type { Agent } from '../types/agent';
+import type { Agent, AgentStatus } from '../types/agent';
 
 interface Props {
   agents: Agent[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  onAgentState: (id: string, status: AgentStatus, location: string) => void;
   worldHandle: { current: WorldHandle | null };
 }
 
-export function WorldView({ agents, selectedId, onSelect, worldHandle }: Props) {
+export function WorldView({ agents, selectedId, onSelect, onAgentState, worldHandle }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const onSelectRef = useRef(onSelect);
+  const onAgentStateRef = useRef(onAgentState);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
+    onAgentStateRef.current = onAgentState;
   });
 
   useEffect(() => {
@@ -24,6 +27,7 @@ export function WorldView({ agents, selectedId, onSelect, worldHandle }: Props) 
     const handle = createWorld(container, {
       agents,
       onSelectAgent: (id) => onSelectRef.current(id),
+      onAgentState: (id, status, location) => onAgentStateRef.current(id, status, location),
     });
     worldHandle.current = handle;
     return () => {

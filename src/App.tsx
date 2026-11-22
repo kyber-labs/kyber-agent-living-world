@@ -7,6 +7,7 @@ import { AgentDetail } from './ui/AgentDetail';
 import { Hud } from './ui/Hud';
 import type { WorldHandle } from './world/engine/createWorld';
 import type { CameraMode } from './world/camera/CameraDirector';
+import type { AgentStatus, LiveAgentState } from './types/agent';
 
 const CAMERA_MODES: { id: CameraMode; label: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -19,9 +20,16 @@ const CAMERA_MODES: { id: CameraMode; label: string }[] = [
 function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>('overview');
+  const [liveStates, setLiveStates] = useState<LiveAgentState>(() =>
+    Object.fromEntries(AGENTS.map((a) => [a.id, { status: 'idle' as AgentStatus, location: 'Plaza' }])),
+  );
   const worldHandle = useRef<WorldHandle | null>(null);
   const selected = AGENTS.find((a) => a.id === selectedId) ?? null;
   const dbConfigured = isPersistenceConfigured();
+
+  function handleAgentState(id: string, status: AgentStatus, location: string): void {
+    setLiveStates((prev) => ({ ...prev, [id]: { status, location } }));
+  }
 
   function handleModeChange(mode: CameraMode): void {
     if (mode === 'follow' && !selectedId) {
@@ -36,7 +44,7 @@ function App() {
       <header className="app-header">
         <div className="header-title">
           <h1>AI Agent Living World</h1>
-          <span className="phase-badge">Phase 2 — Dunia &amp; Kamera</span>
+          <span className="phase-badge">Phase 3 — Karakter &amp; Navigasi</span>
         </div>
         <div className="header-actions">
           <button type="button" onClick={() => handleModeChange('overview')}>
@@ -45,7 +53,7 @@ function App() {
         </div>
       </header>
       <main className="app-main">
-        <AgentList agents={AGENTS} selectedId={selectedId} onSelect={setSelectedId} />
+        <AgentList agents={AGENTS} selectedId={selectedId} onSelect={setSelectedId} liveStates={liveStates} />
         <section className="world-wrap">
           <div className="camera-toolbar" role="group" aria-label="Mode kamera">
             {CAMERA_MODES.map((m) => (
@@ -64,6 +72,7 @@ function App() {
             agents={AGENTS}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            onAgentState={handleAgentState}
             worldHandle={worldHandle}
           />
           {cameraMode === 'first-person' && (
@@ -73,9 +82,9 @@ function App() {
             Seret untuk memutar kamera · scroll untuk zoom · klik figur agent untuk memilih
           </p>
         </section>
-        <AgentDetail agent={selected} />
+        <AgentDetail agent={selected} liveState={selected ? liveStates[selected.id] : undefined} />
       </main>
-      <Hud agents={AGENTS} dbConfigured={dbConfigured} />
+      <Hud agents={AGENTS} liveStates={liveStates} dbConfigured={dbConfigured} />
     </div>
   );
 }
