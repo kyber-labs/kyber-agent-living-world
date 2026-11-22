@@ -42,6 +42,14 @@ function turnToward(yaw: number, target: number, maxStep: number): number {
 export class AgentBehavior {
   private readonly agents = new Map<string, BehaviorAgent>();
   private readonly cb: BehaviorCallbacks;
+  // Phase 4: agent yang memegang tugas 'doing' fokus bekerja (bukan
+  // aktivitas acak) selama tugasnya masih berjalan. Judul tugas hanya
+  // dipakai penanda; status yang dilaporkan tetap 'working'.
+  private readonly taskFocus = new Map<string, string | null>();
+
+  setTaskFocus(agentId: string, taskTitle: string | null): void {
+    this.taskFocus.set(agentId, taskTitle);
+  }
 
   constructor(
     agents: Agent[],
@@ -125,6 +133,13 @@ export class AgentBehavior {
       return;
     }
     const roll = Math.random();
+    // Phase 4: agent dengan tugas 'doing' tetap bekerja (bukan acak).
+    if (this.taskFocus.get(a.id)) {
+      a.status = 'working';
+      a.dwellUntil = now + 8 + Math.random() * 4;
+      this.cb.onStatus(a.id, 'working', a.location);
+      return;
+    }
     let status: AgentStatus = 'idle';
     if (roll < 0.4) status = 'idle';
     else if (roll < 0.65) status = 'working';

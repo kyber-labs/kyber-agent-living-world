@@ -36,6 +36,7 @@ export interface WorldHandle {
   resetCamera: () => void;
   selectAgent: (id: string | null) => void;
   setCameraMode: (mode: CameraMode) => void;
+  setTaskFocus: (agentId: string, taskTitle: string | null) => void;
   getCameraState: () => CameraState;
   getCityInfo: () => CityInfo;
   getAgentPositions: () => AgentPosition[];
@@ -282,6 +283,8 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     resetCamera,
     selectAgent,
     setCameraMode: (mode: CameraMode) => director.setMode(mode),
+    setTaskFocus: (agentId: string, taskTitle: string | null) =>
+      behavior.setTaskFocus(agentId, taskTitle),
     getCameraState: () => director.getState(),
     getCityInfo: () => city.info,
     getAgentPositions: () =>

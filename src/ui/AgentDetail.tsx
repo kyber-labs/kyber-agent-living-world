@@ -1,12 +1,15 @@
 import type { Agent, AgentStatus } from '../types/agent';
 import { STATUS_LABEL } from '../types/agent';
+import type { Task } from '../types/task';
 
 interface Props {
   agent: Agent | null;
   liveState?: { status: AgentStatus; location: string };
+  currentTask?: Task | null;
+  onChat?: () => void;
 }
 
-export function AgentDetail({ agent, liveState }: Props) {
+export function AgentDetail({ agent, liveState, currentTask, onChat }: Props) {
   if (!agent) {
     return (
       <aside className="detail">
@@ -29,9 +32,19 @@ export function AgentDetail({ agent, liveState }: Props) {
           <span>Lokasi</span>
           <strong>{liveState?.location ?? 'Plaza'}</strong>
         </div>
+        {currentTask && (
+          <div className="detail-row">
+            <span>Tugas</span>
+            <strong>{currentTask.title}</strong>
+          </div>
+        )}
         <p className="detail-desc">{agent.description}</p>
+        {onChat && (
+          <button type="button" className="primary detail-chat" onClick={onChat}>
+            Chat dengan {agent.name}
+          </button>
+        )}
       </div>
-      <p className="muted">Tugas, riwayat, dan chat agent adalah Phase 4.</p>
     </aside>
   );
 }

@@ -82,6 +82,24 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
 - Engine + integrasi LLM (OpenAI/Anthropic/Gemini — BUTUH keputusan API key
   + biaya dari Bos), task manager lengkap (Kanban, kalender, dependensi),
   tabel + migrasi + seed Supabase.
+- Keputusan Bos 23 Nov 04:02: **Gemini (tier gratis Google AI Studio)**.
+  Engine provider-agnostic (`src/ai/llm.ts`); adaptor Gemini memanggil
+  `generativelanguage.googleapis.com` model `gemini-2.5-flash` (bisa diubah
+  via `VITE_GEMINI_MODEL`). Key lewat `VITE_GEMINI_API_KEY` — ikut ke
+  bundle publik, WAJIB dibatasi ke referrer Vercel di AI Studio.
+- LLM hanya dipanggil atas aksi pengguna (chat / penugasan otomatis) —
+  hemat kuota free tier (~15 req/menit). Bila key kosong/gagal: mode
+  simulasi lokal yang diberi label jelas, tidak diklaim sebagai AI.
+- TaskStore: localStorage selalu + sync Supabase bila dikonfigurasi;
+  seed 7 tugas demo (2 doing, 4 todo, 1 done; dependensi task-3→task-2,
+  task-6→task-1). Agent dengan tugas 'doing' fokus bekerja di dunia 3D
+  (behavior.taskFocus), bukan aktivitas acak.
+- UI: TaskBoard Kanban (buat/pindah/hapus/tugaskan otomatis), AgentChat
+  per agent (lencana Gemini live / Simulasi lokal), HUD menampilkan mode AI
+  + jumlah tugas terbuka. Migrasi `supabase/migrations/20261123_create_tasks.sql`
+  (tasks + chat_messages, RLS demo-terbuka; auth/RBAC fase lanjut).
+- Belum: kalender tugas (baru deadline di kartu), sinkronisasi chat ke
+  Supabase (tabel ada, wiring menyusul), proksi server-side untuk key.
 
 ## Phase 5 — Meeting room, kolaborasi, life simulation
 - 6 ruang meeting, kolaborasi (whiteboard, catatan bersama), jadwal harian,
@@ -97,6 +115,8 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   pengujian yang jujur.
 
 ## Backlog transparan (belum ada — jangan diklaim berfungsi)
-- AI engine, task management, meeting room, life sim, olahraga, world
-  builder, analytics, mode gelap, database live, autentikasi, animasi
-  berlari dan berbicara yang terpisah.
+- Kalender tugas (baru deadline di kartu), sinkronisasi chat ke Supabase,
+  meeting room, life sim, olahraga, world builder, analytics, mode gelap,
+  autentikasi, animasi berlari dan berbicara yang terpisah.
+- Database live: sinkronisasi tugas aktif bila Supabase dikonfigurasi;
+  sampai saat itu tugas tersimpan lokal (localStorage).
