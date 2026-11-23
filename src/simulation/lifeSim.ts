@@ -80,6 +80,10 @@ const DRIFT_PER_HOUR: Record<AgentStatus, { energy: number; focus: number; mood:
   celebrating: { energy: -1, focus: -1, mood: 3 },
   resting: { energy: 6, focus: 4, mood: 1 },
   error: { energy: -1, focus: -2, mood: -2 },
+  // Phase 6: olahraga menguras energi tapi menaikkan mood; hiburan
+  // menaikkan mood dengan biaya energi kecil.
+  sports: { energy: -2, focus: -1, mood: 2 },
+  entertainment: { energy: -1, focus: -1, mood: 2.5 },
 };
 
 /** Pengaruh cuaca pada mood, per jam simulasi. */

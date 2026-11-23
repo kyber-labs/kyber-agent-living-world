@@ -151,9 +151,76 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   pengingat/undangan meeting, pengaruh vital ke kecepatan/kinerja agent
   (saat ini vital hanya tampil + memengaruhi mood), siklus musim.
 
-## Phase 6 — Olahraga, hiburan, world builder, analytics
-- Sistem olahraga + kompetisi, hiburan, build mode (katalog objek, simpan/
-  muat desain), dashboard analytics + export PDF/CSV.
+## Phase 6 — Olahraga, hiburan, world builder, analytics ✅ SELESAI (23 Nov 2026)
+- Olahraga & hiburan (`src/types/event.ts`, `src/simulation/eventStore.ts`,
+  `src/simulation/eventLogic.ts`, `src/ui/EventsPanel.tsx`): dua jenis
+  acara yang dipicu Bos dari panel "Acara" — "Pertandingan persahabatan"
+  (Arena, maks 8 peserta, status `sports`) dan "Pertunjukan" (depan
+  Panggung, maks 10 peserta, status `entertainment`). Durasi dipilih
+  60/180/300 detik nyata; acara berakhir otomatis saat durasi habis
+  (dicek tiap 5 detik) atau manual lewat "Akhiri acara"; riwayat selesai +
+  hapus riwayat. Validasi murni: judul wajib, min 2 peserta, maks
+  kapasitas, lokasi belum dipakai acara lain, peserta belum ikut meeting
+  atau acara lain — meeting dan acara saling mengunci peserta
+  (`validateStartMeeting` menerima daftar acara aktif sebagai param
+  opsional ke-6). Tersimpan di localStorage (`living-world-events-v1`);
+  satu acara contoh yang sudah selesai di-seed (jejak demo, sama seperti
+  seed meeting). Lokasi acara aktif ditandai cincin berwarna di tanah
+  (hijau Arena, pink Panggung).
+- Perilaku acara (`src/simulation/behavior.ts`): peserta berjalan ke
+  lokasi via graf BFS yang sudah ada, lalu jalan lurus ke slotnya
+  (pertandingan: lingkaran r 3,5 di pusat Arena; pertunjukan: busur r 3
+  di depan Panggung) dan berstatus 'sports'/'entertainment' menghadap
+  pusat selama penugasan ada; acara berakhir → peserta bubar. Meeting
+  ambient Phase 3 tidak menarik peserta acara terjadwal. Aktivitas
+  ambient: agent yang tujuan acaknya Arena/Panggung berkesempatan 30%
+  berolahraga / menikmati hiburan saat tiba (8–14 detik), lalu kembali
+  ke aktivitas ambient. Status baru di `src/types/agent.ts`: `sports`
+  ("Olahraga", #16a34a) dan `entertainment` ("Hiburan", #db2777);
+  tampil di sidebar + HUD sama seperti status lain.
+- Animasi (`src/world/characters/AgentCharacter.ts`): pose olahraga =
+  jumping-jack prosedural (lengan/kaki bergantian + lompatan kecil,
+  t*6); pose hiburan = goyangan dansa lembut (badan/kepala bergoyang,
+  t*2,5). Keduanya variasi dari pose prosedural Phase 3, tanpa aset baru.
+- Vital (`src/simulation/lifeSim.ts`): olahraga menguras energi (−2/jam)
+  dan sedikit fokus (−1/jam) tapi menaikkan mood (+2/jam); hiburan
+  menguras sedikit energi/fokus (−1/jam) dan menaikkan mood lebih besar
+  (+2,5/jam). Aturan simulasi, bukan jawaban model AI.
+- World builder (`src/types/worldObject.ts`,
+  `src/simulation/worldObjectStore.ts`, `src/simulation/builderLogic.ts`,
+  `src/world/buildings/props.ts`, `src/ui/BuilderPanel.tsx`): katalog 4
+  objek dari primitif Three.js — pohon, bangku taman, lampu taman
+  (tiang + bola cahaya hangat + kap), air mancur (kolam + cakram air +
+  kolom + bola atas). Penempatan = klik tanah di kanvas 3D saat mode
+  bangun aktif (panel "Builder" → pilih jenis → klik tanah; mode bangun
+  mencegat klik agar tidak memilih agent; ambang drag 10px yang sama
+  dipakai). Validasi murni: batas ±40, tidak di dalam gedung (margin 1),
+  jarak antar objek min 1,5. Bangku otomatis menghadap pusat plaza.
+  Pindah = tombol "Pindah" lalu klik tanah tujuan; hapus per baris.
+  Objek tersimpan di localStorage (`living-world-objects-v1`; seed:
+  bangku di (8,8) + lampu di (−8,8)) dan tampil di dunia 3D + minimap
+  (titik warna katalog).
+- Analytics (`src/simulation/analytics.ts`, `src/ui/AnalyticsPanel.tsx`):
+  panel "Analitik" menghitung statistik NYATA dari state aplikasi
+  (bukan angka karangan): tugas per status + % selesai + terlambat +
+  pemegang terbanyak, meeting (jumlah, total + rata-rata durasi, peserta
+  tersering, catatan), acara (jumlah, pertandingan/pertunjukan,
+  aktif/selesai), distribusi aktivitas agent saat ini + lokasi tersering,
+  rata-rata vital + energi terendah, jam/periode/cuaca, objek builder per
+  jenis. Tampil sebagai angka + bar CSS (tanpa library chart).
+  Export CSV = unduh `living-world-analytics.csv` (header
+  `Bagian,Metrik,Nilai`). Export PDF = tombol "Cetak / Simpan PDF" yang
+  memanggil `window.print()` dengan CSS print yang hanya menampilkan
+  panel analytics — ini JALUR PRINT BROWSER, bukan generator PDF, dan
+  didokumentasikan apa adanya di sini.
+- Catatan jujur: posisi berdiri peserta acara dihitung dari urutan
+  peserta (bukan tempat tetap); acara hanya mulai langsung (belum ada
+  jadwal ke depan); vital memengaruhi mood saja, belum kecepatan/kinerja
+  agent; animasi olahraga/hiburan prosedural sederhana; PDF hanya via
+  print browser.
+- Belum: sync acara + objek builder ke Supabase (tabel belum ada — butuh
+  migrasi baru bila diputuskan), jadwal acara ke depan, generator PDF
+  sesungguhnya, pengaruh vital ke kecepatan/kinerja agent.
 
 ## Phase 7 — Optimasi, pengujian, dokumentasi
 - LOD, frustum culling, instancing, pengaturan kualitas grafis, monitoring
@@ -162,8 +229,11 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
 
 ## Backlog transparan (belum ada — jangan diklaim berfungsi)
 - Kalender tugas (baru deadline di kartu), sinkronisasi chat ke Supabase,
-  sinkronisasi meeting ke Supabase (tabel belum ada), jadwal meeting ke
-  depan (baru mulai langsung), olahraga, world builder, analytics, mode
-  gelap, autentikasi, animasi berlari dan berbicara yang terpisah.
+  sinkronisasi meeting ke Supabase (tabel belum ada), sinkronisasi acara +
+  objek builder ke Supabase (tabel belum ada), jadwal meeting/acara ke
+  depan (baru mulai langsung), generator PDF sesungguhnya (saat ini hanya
+  print browser), mode gelap, autentikasi, animasi berlari dan berbicara
+  yang terpisah.
 - Database live: sinkronisasi tugas aktif bila Supabase dikonfigurasi;
-  sampai saat itu tugas + meeting tersimpan lokal (localStorage).
+  sampai saat itu tugas + meeting + acara + objek builder tersimpan lokal
+  (localStorage).

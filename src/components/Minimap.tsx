@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
 import type { WorldHandle } from '../world/engine/createWorld';
+import { WORLD_OBJECT_CATALOG } from '../types/worldObject';
 
 interface Props {
   worldHandle: { current: WorldHandle | null };
@@ -63,6 +64,14 @@ export function Minimap({ worldHandle }: Props) {
               ctx.strokeStyle = '#ffffff';
               ctx.lineWidth = 1;
               ctx.strokeRect(x - 3, z - 3, 6, 6);
+            });
+            // Phase 6: penanda objek world builder (titik warna katalog).
+            handle.getWorldObjects().forEach((o) => {
+              const [x, z] = toMap(o.x, o.z);
+              ctx.fillStyle = WORLD_OBJECT_CATALOG[o.kind].color;
+              ctx.beginPath();
+              ctx.arc(x, z, 2.5, 0, Math.PI * 2);
+              ctx.fill();
             });
             handle.getAgentPositions().forEach((a) => {
               const [x, z] = toMap(a.x, a.z);

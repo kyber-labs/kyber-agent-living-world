@@ -17,6 +17,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Agent, AgentStatus } from '../../types/agent';
 import type { MeetingAssignment, MeetingRoom } from '../../types/meeting';
 import { MEETING_ROOMS } from '../../types/meeting';
+import type { EventAssignment } from '../../types/event';
+import type { WorldObject } from '../../types/worldObject';
+import { buildWorldObject } from '../buildings/props';
 import { createWorldClock } from '../../simulation/clock';
 import { LifeSim, type EnvironmentState, type Vitals, type WeatherKind, type DayPeriod } from '../../simulation/lifeSim';
 import { AgentBehavior } from '../../simulation/behavior';
@@ -43,9 +46,13 @@ export interface WorldHandle {
   setTaskFocus: (agentId: string, taskTitle: string | null) => void;
   setMeetingAssignment: (agentId: string, assignment: MeetingAssignment | null) => void;
   setRoomActive: (roomId: string, active: boolean) => void;
+  setEventAssignment: (agentId: string, assignment: EventAssignment | null) => void;
+  setEventActive: (locationId: 'arena' | 'stage', active: boolean) => void;
+  setWorldObjects: (objects: WorldObject[]) => void;
   getCameraState: () => CameraState;
   getCityInfo: () => CityInfo;
   getMeetingRooms: () => MeetingRoom[];
+  getWorldObjects: () => WorldObject[];
   getAgentPositions: () => AgentPosition[];
   focusPoint: (x: number, z: number) => void;
 }
@@ -55,6 +62,10 @@ export interface WorldOptions {
   onSelectAgent: (id: string | null) => void;
   onAgentState?: (id: string, status: AgentStatus, location: string) => void;
   onLifeTick?: (vitals: Record<string, Vitals>, env: EnvironmentState) => void;
+  /** Dipanggil saat mode bangun aktif dan pengguna mengklik tanah. */
+  onGroundClick?: (x: number, z: number) => void;
+  /** True saat mode bangun (penempatan/pindah objek) sedang aktif. */
+  isBuildMode?: () => boolean;
 }
 
 const CAMERA_HOME = new THREE.Vector3(0, 40, 75);
@@ -205,6 +216,28 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   // Ruang meeting Phase 5 — zona bernama di kawasan yang sudah ada.
   const roomVisuals = buildMeetingRooms(scene, MEETING_ROOMS);
 
+  // Phase 6: objek world builder (grup dibangun ulang tiap setWorldObjects)
+  // + cincin penanda lokasi acara aktif (Arena / depan Panggung).
+  const builderGroup = new THREE.Group();
+  scene.add(builderGroup);
+  let worldObjects: WorldObject[] = [];
+  const eventRings = new Map<string, THREE.Mesh>();
+  const eventRingDefs: { locationId: 'arena' | 'stage'; x: number; z: number; r: number; color: number }[] = [
+    { locationId: 'arena', x: 25, z: -12, r: 4.6, color: 0x16a34a },
+    { locationId: 'stage', x: -25, z: -6, r: 4.2, color: 0xdb2777 },
+  ];
+  eventRingDefs.forEach((def) => {
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(def.r, def.r + 0.3, 48),
+      new THREE.MeshBasicMaterial({ color: def.color, transparent: true, opacity: 0.85, side: THREE.DoubleSide }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(def.x, 0.05, def.z);
+    ring.visible = false;
+    scene.add(ring);
+    eventRings.set(def.locationId, ring);
+  });
+
   // Life simulation Phase 5 — jam harian, cuaca, vital per agent.
   const lifeSim = new LifeSim(agents.map((a) => a.id));
   const initialEnv = lifeSim.getEnvironment();
@@ -326,6 +359,16 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
+    // Phase 6: mode bangun aktif — klik tanah menempatkan/memindah objek,
+    // bukan memilih agent.
+    if (options.isBuildMode?.()) {
+      const groundHits = raycaster.intersectObject(ground, false);
+      if (groundHits.length > 0) {
+        const p = groundHits[0].point;
+        options.onGroundClick?.(p.x, p.z);
+      }
+      return;
+    }
     const hits = raycaster.intersectObjects(hitTargets, false);
     if (hits.length > 0) {
       const hit = hits[0].object as THREE.Object3D;
@@ -418,6 +461,26 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     director.reset();
   }
 
+  /** Bangun ulang isi grup builder dari daftar objek (dipanggil tiap berubah). */
+  function setWorldObjects(objects: WorldObject[]): void {
+    worldObjects = objects;
+    while (builderGroup.children.length > 0) {
+      const child = builderGroup.children[0];
+      builderGroup.remove(child);
+      child.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          obj.geometry?.dispose();
+          const mat = obj.material as THREE.Material | THREE.Material[];
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+          else mat?.dispose();
+        }
+      });
+    }
+    objects.forEach((o) => {
+      builderGroup.add(buildWorldObject(o.kind, o.x, o.z, o.rotY));
+    });
+  }
+
   return {
     dispose,
     resetCamera,
@@ -428,9 +491,17 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     setMeetingAssignment: (agentId: string, assignment: MeetingAssignment | null) =>
       behavior.setMeeting(agentId, assignment),
     setRoomActive: (roomId: string, active: boolean) => roomVisuals.setActive(roomId, active),
+    setEventAssignment: (agentId: string, assignment: EventAssignment | null) =>
+      behavior.setEvent(agentId, assignment),
+    setEventActive: (locationId: 'arena' | 'stage', active: boolean) => {
+      const ring = eventRings.get(locationId);
+      if (ring) ring.visible = active;
+    },
+    setWorldObjects,
     getCameraState: () => director.getState(),
     getCityInfo: () => city.info,
     getMeetingRooms: () => MEETING_ROOMS,
+    getWorldObjects: () => worldObjects,
     getAgentPositions: () =>
       agents.map((a) => {
         const c = characters.get(a.id);

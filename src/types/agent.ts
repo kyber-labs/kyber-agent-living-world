@@ -9,7 +9,10 @@ export type AgentStatus =
   | 'moving'
   | 'celebrating'
   | 'resting'
-  | 'error';
+  | 'error'
+  // Phase 6: aktivitas olahraga & hiburan (acara terjadwal + ambient).
+  | 'sports'
+  | 'entertainment';
 
 export interface Agent {
   id: string;
@@ -31,6 +34,8 @@ export const STATUS_LABEL: Record<AgentStatus, string> = {
   celebrating: 'Merayakan',
   resting: 'Istirahat',
   error: 'Error',
+  sports: 'Olahraga',
+  entertainment: 'Hiburan',
 };
 
 /** Warna titik status (label 3D + UI). */
@@ -43,6 +48,8 @@ export const STATUS_COLOR: Record<AgentStatus, string> = {
   celebrating: '#ec4899',
   resting: '#14b8a6',
   error: '#ef4444',
+  sports: '#16a34a',
+  entertainment: '#db2777',
 };
 
 /** Status + lokasi live per agent, dikirim engine saat berubah (Phase 3). */

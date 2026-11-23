@@ -8,6 +8,7 @@
 
 import type { Agent, AgentStatus } from '../types/agent';
 import type { MeetingAssignment } from '../types/meeting';
+import type { EventAssignment } from '../types/event';
 import { findPath, getNode, NAV_NODES } from '../world/navigation/navGraph';
 
 export interface BehaviorCallbacks {
@@ -34,6 +35,10 @@ interface BehaviorAgent {
   scheduledMeeting: boolean;
   /** Tujuan jalan lurus (ke slot di dalam room) — bukan simpul graf. */
   directTarget: { x: number; z: number } | null;
+  /** True bila sedang mengikuti acara terjadwal (olahraga/hiburan). */
+  inEvent: boolean;
+  /** Aktivitas yang ditunggu saat tiba di Arena/Panggung (ambient). */
+  pendingActivity: 'sports' | 'entertainment' | null;
 }
 
 function turnToward(yaw: number, target: number, maxStep: number): number {
@@ -54,6 +59,10 @@ export class AgentBehavior {
   // Phase 5: penugasan meeting terjadwal — agent berjalan ke room, lalu
   // berdiri di slotnya dan berstatus 'meeting' selama penugasan ada.
   private readonly meetingAssignments = new Map<string, MeetingAssignment>();
+  // Phase 6: penugasan acara terjadwal — agent berjalan ke Arena/Panggung,
+  // lalu berdiri di slotnya dan berstatus 'sports'/'entertainment' selama
+  // penugasan ada. Meeting dan acara saling mengecualikan (divalidasi di UI).
+  private readonly eventAssignments = new Map<string, EventAssignment>();
 
   setTaskFocus(agentId: string, taskTitle: string | null): void {
     this.taskFocus.set(agentId, taskTitle);
@@ -83,6 +92,30 @@ export class AgentBehavior {
     a.scheduledMeeting = false;
   }
 
+  /**
+   * Tetapkan / cabut penugasan acara satu agent. Bila diberi lokasi, agent
+   * segera berangkat ke sana (memutus meeting ambient bila sedang
+   * berlangsung); bila dicabut, agent bubar dari lokasi pada tick berikut.
+   */
+  setEvent(agentId: string, assignment: EventAssignment | null): void {
+    const a = this.agents.get(agentId);
+    if (!a) return;
+    if (assignment) {
+      if (a.partnerId) this.releasePartner(a, 0);
+      this.eventAssignments.set(agentId, assignment);
+      a.inEvent = true;
+      a.directTarget = null;
+      if (a.status !== 'moving') a.dwellUntil = 0;
+      return;
+    }
+    this.eventAssignments.delete(agentId);
+    a.directTarget = null;
+    if (a.inEvent && (a.status === 'sports' || a.status === 'entertainment')) {
+      a.dwellUntil = 0; // bubar: berangkat pada tick berikut
+    }
+    a.inEvent = false;
+  }
+
   constructor(
     agents: Agent[],
     initial: { id: string; x: number; z: number }[],
@@ -107,6 +140,8 @@ export class AgentBehavior {
         location: 'Plaza',
         scheduledMeeting: false,
         directTarget: null,
+        inEvent: false,
+        pendingActivity: null,
       });
     });
   }
@@ -128,7 +163,9 @@ export class AgentBehavior {
           a.x = a.directTarget.x;
           a.z = a.directTarget.z;
           a.directTarget = null;
-          this.beginMeeting(a, now);
+          // Phase 6: slot acara (bukan slot meeting) → mulai aktivitas acara.
+          if (this.eventAssignments.has(a.id)) this.beginEvent(a, now);
+          else this.beginMeeting(a, now);
         } else {
           a.x += (dx / dist) * step;
           a.z += (dz / dist) * step;
@@ -161,6 +198,13 @@ export class AgentBehavior {
             a.location = assignment.roomName;
             return;
           }
+          // Phase 6: bila ini simpul lokasi acara, lanjut ke slot acara.
+          const eventAssignment = this.eventAssignments.get(a.id);
+          if (eventAssignment && a.node === eventAssignment.nodeId) {
+            a.directTarget = { x: eventAssignment.slotX, z: eventAssignment.slotZ };
+            a.location = eventAssignment.locationName;
+            return;
+          }
           this.arrive(a, now);
         }
       } else {
@@ -173,6 +217,17 @@ export class AgentBehavior {
     // Phase 5: peserta meeting terjadwal tetap di room selama penugasan ada.
     const assignment = this.meetingAssignments.get(a.id);
     if (a.status === 'meeting' && a.scheduledMeeting && assignment && a.node === assignment.nodeId) {
+      a.dwellUntil = now + 20;
+      return;
+    }
+    // Phase 6: peserta acara tetap di lokasi selama penugasan ada.
+    const eventAssignment = this.eventAssignments.get(a.id);
+    if (
+      (a.status === 'sports' || a.status === 'entertainment') &&
+      a.inEvent &&
+      eventAssignment &&
+      a.node === eventAssignment.nodeId
+    ) {
       a.dwellUntil = now + 20;
       return;
     }
@@ -196,6 +251,22 @@ export class AgentBehavior {
     this.cb.onStatus(a.id, 'meeting', a.location);
   }
 
+  /** Agent tiba di slot acara: hadap pusat lokasi, status 'sports'/'entertainment'. */
+  private beginEvent(a: BehaviorAgent, now: number): void {
+    const assignment = this.eventAssignments.get(a.id);
+    if (!assignment) {
+      // Acara keburu berakhir saat berjalan ke slot — kedatangan biasa.
+      this.arrive(a, now);
+      return;
+    }
+    a.yaw = Math.atan2(assignment.x - a.x, assignment.z - a.z);
+    a.location = assignment.locationName;
+    a.status = assignment.status;
+    a.dwellUntil = now + 20;
+    this.cb.onMove(a.id, a.x, a.z, a.yaw);
+    this.cb.onStatus(a.id, a.status, a.location);
+  }
+
   private arrive(a: BehaviorAgent, now: number): void {
     if (a.path.length > 0) {
       a.node = a.path[a.path.length - 1];
@@ -212,6 +283,20 @@ export class AgentBehavior {
       }
       // Sudah di simpul room — jalan lurus ke slot.
       a.directTarget = { x: assignment.slotX, z: assignment.slotZ };
+      a.status = 'moving';
+      this.cb.onStatus(a.id, 'moving', a.location);
+      return;
+    }
+    // Phase 6: agent berpenugasan acara tidak ikut aktivitas acak.
+    const eventAssignment = this.eventAssignments.get(a.id);
+    if (eventAssignment) {
+      if (a.node !== eventAssignment.nodeId) {
+        // Belum sampai lokasi — lanjutkan perjalanan ke sana.
+        this.depart(a, now);
+        return;
+      }
+      // Sudah di simpul lokasi — jalan lurus ke slot.
+      a.directTarget = { x: eventAssignment.slotX, z: eventAssignment.slotZ };
       a.status = 'moving';
       this.cb.onStatus(a.id, 'moving', a.location);
       return;
@@ -241,6 +326,16 @@ export class AgentBehavior {
       this.cb.onStatus(a.id, 'working', a.location);
       return;
     }
+    // Phase 6: aktivitas ambient olahraga/hiburan — agent yang tiba di
+    // Arena/Panggung sesekali berolahraga / menikmati hiburan, bukan acak.
+    if (a.pendingActivity && (a.node === 'arena' || a.node === 'stage')) {
+      a.status = a.pendingActivity;
+      a.pendingActivity = null;
+      a.dwellUntil = now + 8 + Math.random() * 6;
+      this.cb.onStatus(a.id, a.status, a.location);
+      return;
+    }
+    a.pendingActivity = null;
     let status: AgentStatus = 'idle';
     if (roll < 0.4) status = 'idle';
     else if (roll < 0.65) status = 'working';
@@ -259,6 +354,8 @@ export class AgentBehavior {
       if (other.status === 'moving') continue;
       // Phase 5: peserta meeting terjadwal tidak ditarik ke meeting ambient.
       if (other.scheduledMeeting || this.meetingAssignments.has(other.id)) continue;
+      // Phase 6: peserta acara terjadwal tidak ditarik ke meeting ambient.
+      if (other.inEvent || this.eventAssignments.has(other.id)) continue;
       if (Math.hypot(other.x - a.x, other.z - a.z) < 3) return other;
     }
     return null;
@@ -282,10 +379,26 @@ export class AgentBehavior {
   private depart(a: BehaviorAgent, now: number): void {
     this.releasePartner(a, now);
     // Phase 5: agent berpenugasan meeting berangkat ke room, bukan acak.
+    // Phase 6: agent berpenugasan acara berangkat ke lokasi acara.
     const assignment = this.meetingAssignments.get(a.id);
-    const dest = assignment
-      ? (getNode(assignment.nodeId) ?? NAV_NODES[Math.floor(Math.random() * NAV_NODES.length)])
+    const eventAssignment = this.eventAssignments.get(a.id);
+    const destNode = assignment
+      ? assignment.nodeId
+      : eventAssignment
+        ? eventAssignment.nodeId
+        : null;
+    const dest = destNode
+      ? (getNode(destNode) ?? NAV_NODES[Math.floor(Math.random() * NAV_NODES.length)])
       : NAV_NODES[Math.floor(Math.random() * NAV_NODES.length)];
+    // Phase 6: tujuan acak Arena/Panggung sesekali jadi aktivitas
+    // olahraga/hiburan saat tiba (bukan sekadar mampir).
+    if (!destNode && dest.id === 'arena' && Math.random() < 0.3) {
+      a.pendingActivity = 'sports';
+    } else if (!destNode && dest.id === 'stage' && Math.random() < 0.3) {
+      a.pendingActivity = 'entertainment';
+    } else {
+      a.pendingActivity = null;
+    }
     const path = dest.id === a.node ? [a.node] : findPath(a.node, dest.id);
     a.path = path;
     a.pathIdx = path[0] === a.node ? 1 : 0;

@@ -3,11 +3,13 @@
 
 import type { Agent } from '../types/agent';
 import type { Meeting, MeetingRoom } from '../types/meeting';
+import type { CityEvent } from '../types/event';
 
 /**
  * Validasi mulai meeting. Mengembalikan pesan error (Bahasa Indonesia)
  * atau null bila valid. Urutan cek: topik, jumlah peserta, kapasitas,
- * room sedang dipakai, peserta sudah ikut meeting lain.
+ * room sedang dipakai, peserta sudah ikut meeting lain, peserta sedang
+ * ikut acara (Phase 6 — meeting dan acara saling mengecualikan).
  */
 export function validateStartMeeting(
   room: MeetingRoom,
@@ -15,6 +17,7 @@ export function validateStartMeeting(
   participantIds: string[],
   meetings: Meeting[],
   agents: Agent[],
+  events: CityEvent[] = [],
 ): string | null {
   if (!topic.trim()) return 'Topik meeting wajib diisi.';
   if (participantIds.length < 2) return 'Pilih minimal 2 peserta.';
@@ -30,6 +33,12 @@ export function validateStartMeeting(
   if (clash) {
     const name = agents.find((a) => a.id === clash)?.name ?? clash;
     return `${name} sedang mengikuti meeting lain.`;
+  }
+  const inEvent = new Set(events.filter((e) => e.status === 'active').flatMap((e) => e.participantIds));
+  const eventClash = participantIds.find((id) => inEvent.has(id));
+  if (eventClash) {
+    const name = agents.find((a) => a.id === eventClash)?.name ?? eventClash;
+    return `${name} sedang mengikuti acara.`;
   }
   return null;
 }

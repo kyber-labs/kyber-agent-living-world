@@ -325,6 +325,31 @@ export class AgentCharacter {
       this.head.rotation.y = Math.sin(t * 10) * 0.3;
       this.armL.rotation.z = 1.2;
       this.armR.rotation.z = -1.2;
+    } else if (s === 'sports') {
+      // Olahraga: jumping jack — lengan naik-turun bergantian, kaki
+      // membuka-menutup, badan melompat kecil. Terbaca dari jauh.
+      const swing = Math.sin(t * 6);
+      this.legL.rotation.x = swing * 0.5;
+      this.legR.rotation.x = -swing * 0.5;
+      this.legL.rotation.z = 0.25 + swing * 0.15;
+      this.legR.rotation.z = -0.25 - swing * 0.15;
+      this.armL.rotation.x = -2.0 + swing * 0.4;
+      this.armR.rotation.x = -2.0 - swing * 0.4;
+      this.armL.rotation.z = 0.4;
+      this.armR.rotation.z = -0.4;
+      baseY = Math.abs(Math.cos(t * 6)) * 0.08;
+    } else if (s === 'entertainment') {
+      // Hiburan: bergoyang menikmati pertunjukan — badan mengayun,
+      // lengan berayun pelan, kepala mengangguk mengikuti irama.
+      const sway = Math.sin(t * 2.5);
+      this.torso.rotation.z = sway * 0.12;
+      this.armL.rotation.x = -0.6 + sway * 0.3;
+      this.armR.rotation.x = -0.6 + Math.sin(t * 2.5 + 1) * 0.3;
+      this.armL.rotation.z = 0.3;
+      this.armR.rotation.z = -0.3;
+      this.head.rotation.z = sway * 0.1;
+      this.head.rotation.x = Math.sin(t * 2.5 + 0.5) * 0.08;
+      baseY = Math.abs(sway) * 0.03;
     } else {
       // idle: napas + ayun kepala pelan.
       const breathe = Math.sin(t * 1.8) * 0.015;

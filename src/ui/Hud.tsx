@@ -28,7 +28,7 @@ export function Hud({ agents, liveStates, dbConfigured, engineMode, tasks, env }
           ? `${formatClock(env.minutesOfDay)} · ${PERIOD_LABEL[env.period]} · ${WEATHER_ICON[env.weather]} ${WEATHER_LABEL[env.weather]}`
           : 'Jam: —'}
       </span>
-      <span>Fase 5/7 — Meeting &amp; Life Sim</span>
+      <span>Fase 6/7 — Olahraga &amp; Builder &amp; Analitik</span>
       <span>Database: {dbConfigured ? 'terhubung' : 'belum dikonfigurasi'}</span>
     </footer>
   );
