@@ -829,6 +829,115 @@ agent TIDAK berubah.
   (§8.2.1 ini). TIDAK ada uji logika baru — perbaikan murni
   tampilan, uji palsu tidak dibuat.
 
+## Phase 8.3 — Builder diperluas: 21 item ✅ SELESAI (23 Nov 2026)
+
+- Katalog 4 → 21 item (nama persis acuan "Kampus Nailong"):
+  Pohon, Lampu taman, Bangku, Air mancur, Menara kaca, Gedung kantor,
+  Toko, Rumah, Sekolah, Klinik, Masjid, Taman bermain, Lapak pasar,
+  Halte bus, Kolam, Mobil parkir, Taman bunga, Meja kafe, Kucing
+  (berkeliaran), Anjing (berkeliaran), Bebek (berenang). Semua dari
+  primitif Three.js gaya low-poly yang sama. Pembangun district.ts
+  TIDAK dipakai ulang langsung — pembangun di sana menaruh grup di
+  koordinat tetap, sedangkan objek Builder harus berpusat di titik
+  asal supaya bisa ditempatkan di mana saja; pola bentuknya yang
+  dipakai ulang. Menara kaca memakai material transparan mengilap
+  (opacity 0,55, tanpa bayangan); Gedung kantor lebih kecil dari
+  kantor pusat (4,5×5,5×4,5); Rumah seperti rumah residensial.
+- Posisi: tiap objek di daftar panel menampilkan "Posisi: (x, z)"
+  (format acuan, satu desimal) + putarannya ("Putaran: N°"). Saat
+  mode bangun/pindah aktif, panel juga menampilkan posisi kursor di
+  tanah ("Posisi kursor: (x, z)") — dihitung lewat raycast
+  pointermove ke tanah di createWorld, diteruskan sebagai
+  onGroundHover (diperbarui hanya bila berubah 0,1 supaya tidak
+  me-render ulang React tiap piksel).
+- Label opsional: input "Label (opsional)" saat menempatkan (maks 40
+  karakter, di-trim); tersimpan per objek, tampil di daftar panel
+  (nama label menggantikan nama jenis; nama jenis tetap ditampilkan
+  kecil di sampingnya). Label HANYA di panel — KEPUTUSAN: bukan label
+  3D mengambang, karena tiap label 3D adalah sprite + draw call
+  tambahan tanpa nilai (nama objek hanya relevan saat mengelola
+  daftar); didokumentasikan di sini, bukan disembunyikan.
+- Putaran: slider "Putaran: 0°" (0–360°, langkah 1°) saat
+  menempatkan; tersimpan per objek (rotY radian) dan diterapkan pada
+  mesh 3D. Saat memindah objek yang sudah ada, form diisi dari objek
+  itu (label + putaran lama) dan putaran baru tersimpan bersama
+  posisi baru. Tanpa putaran, arah kembali ke default (bangku
+  menghadap plaza).
+- Validasi diperbarui (footprint, bukan titik): tiap jenis punya
+  ukuran footprint di katalog; kandidat harus muat dalam ±40,
+  tidak menabrak gedung (persegi diperluas margin 1 — termasuk 12
+  footprint tetap 8.2 dari district.ts), dan jarak tepi-ke-tepi
+  antar objek ≥ 1,5. Pesan penolakan sama seperti sebelumnya
+  ("Terlalu dekat dengan {nama}.", "Terlalu dekat dengan objek
+  lain.", "Di luar batas kota (maks ±40)."). Panggilan lama tanpa
+  jenis (uji Phase 6) tetap berperilaku seperti dulu (kandidat =
+  titik) — kompatibilitas dijaga, bukan dilanggar diam-diam.
+- Bebek: HANYA bisa ditempatkan di dalam kolam 8.2 (persegi air
+  24.6–33.4, 17.6–22.4 — dibaca langsung dari NEW_BUILDINGS di
+  district.ts, bukan dihafal). Di luar kolam ditolak dengan pesan
+  "Bebek hanya bisa ditempatkan di kolam." Kolam dikecualikan dari
+  cek gedung untuk bebek (kalau tidak, bebek di kolam justru
+  ditolak sebagai "di dalam gedung"); jenis lain tetap ditolak bila
+  masuk kolam. Bebek dari Builder berenang di kolam yang sama
+  dengan bebek ambient 8.2.
+- Hewan Builder: kucing/anjing yang ditempatkan berkeliaran pelan
+  dalam radius 4,5 unit di sekitar titik penempatannya (pola yang
+  sama dengan Animals 8.2). Definisi bagian tubuh + helper gerak
+  diekstrak ke modul bersama `src/world/animals/animalParts.ts`
+  (dipakai Animals 8.2 dan BuilderAnimals 8.3 — refactor tanpa
+  mengubah API/perilaku Animals; uji 8.2 tetap lulus). Tiap spesies
+  tetap satu InstancedMesh per bagian tubuh; daftar dinamis
+  (setAnimals membangun ulang mesh tiap objek berubah). Hewan
+  Builder tetap BUKAN agent (tidak ada di sidebar/chat/tugas).
+- Kompatibilitas simpanan lama: objek sebelum 8.3 (tanpa label,
+  bisa tanpa rotY) termuat dengan default (label '', rotY = arah
+  default); jenis tak dikenal dibuang. Seed lama (bangku + lampu)
+  tetap. Key localStorage sama (`living-world-objects-v1`).
+- Minimap: tidak ada perubahan kode — objek Builder sudah tampil
+  sebagai titik warna katalog, dan ke-21 jenis punya warna heks
+  valid (diuji). Gedung tetap 8.2 tampil sebagai blok seperti
+  sebelumnya.
+- Instancing + draw call: bagian berulang DALAM satu objek memakai
+  InstancedMesh (lapak pasar 4, mobil 3, taman bunga 3, taman
+  bermain 2, halte 1, meja kafe 2, hewan Builder 11 untuk 2 kucing
+  + 1 anjing + 1 bebek). Katalog saja TIDAK menambah draw call
+  dasar — objek Builder dinamis, scene dasar tetap 2 seed
+  (bangku + lampu): main 236 + shadow 116 = **363 live (TETAP,
+  sama seperti 8.2)**, dihitung ulang dengan sceneCount.ts + metode
+  7.1 dan dikunci uji. Objek yang ditempatkan Bos menambah draw
+  call sesuai mesh-nya (terlihat di HUD) — itu wajar, bukan cacat.
+- Perbaikan susulan yang jujur (ditemukan tsc saat build): (1) type
+  guard `isAnimalKind` tidak mempersempit elemen array lewat
+  `.filter` biasa — diperbaiki dengan predikat tipe eksplisit di
+  createWorld; (2) `analytics.ts` membangun `Record<WorldObjectKind,
+  number>` hanya dengan 4 jenis lama — kini diinisialisasi dari
+  katalog (21 jenis), dan export CSV + ringkasan panel Analitik
+  ikut memakai katalog (satu baris per jenis yang ada). Kedua file
+  ikut masuk zip + backup (bukan perubahan sembunyi).
+- Verifikasi lokal: build LULUS (dist `index-NqboHGE2.js`,
+  929.704 byte; CSS `index-CmFqVcoq.css`, 16.023 byte), dev +
+  preview HTTP 200, uji logika 8.3 **60/60** + TOTAL **276 lulus**
+  (33+49+25+20+18+16+24+31+60), lint 0 error (5 warning pola lama).
+- File: BARU (3): `src/world/animals/animalParts.ts`,
+  `src/world/animals/BuilderAnimals.ts`, `scripts/phase83-test.ts`.
+  DIUBAH (13): `src/types/worldObject.ts` (21 jenis + footprint +
+  label), `src/simulation/builderLogic.ts` (validasi footprint +
+  bebek), `src/simulation/worldObjectStore.ts` (label/putaran +
+  normalisasi simpanan lama), `src/world/buildings/props.ts` (14
+  pembangun baru + hewan → grup kosong), `src/world/animals/
+  Animals.ts` (refactor ke animalParts, API sama),
+  `src/world/engine/createWorld.ts` (BuilderAnimals + hover),
+  `src/components/WorldView.tsx` (onGroundHover),
+  `src/App.tsx` (state label/putaran/hover + wiring),
+  `src/ui/BuilderPanel.tsx` (katalog 21 + form + posisi),
+  `src/index.css` (gaya `.builder-form`),
+  `src/simulation/analytics.ts` (byKind 21 jenis + CSV),
+  `src/ui/AnalyticsPanel.tsx` (ringkasan dari katalog),
+  `scripts/run-all-tests.sh` (suite phase83), `docs/PHASES.md`
+  (§8.3 ini + status akhir). TIDAK diubah: gedung tetap 8.2,
+  `src/ai/*`, logika behavior/task/meeting/event, file Mission
+  Control, sync Supabase objek Builder (tetap localStorage).
+
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
@@ -842,7 +951,10 @@ tetap bisa dibuka) · Phase 8.1.1 ✅ (perbaikan tampilan: label tombol
 terbuka) · Phase 8.2 ✅ (dunia lebih kaya: 12 footprint baru + hewan
 ambient + senja; draw call live 291→363, dihitung ulang cara 7.1) ·
 Phase 8.2.1 ✅ (teks fase → 8.2 + pill kamera membungkus ke 2 baris
-saat panel overlay terbuka, tanpa scrollbar).
+saat panel overlay terbuka, tanpa scrollbar) · Phase 8.3 ✅ (Builder
+21 item + label/putaran/posisi kursor + bebek hanya di kolam + hewan
+Builder berkeliaran; draw call dasar TETAP 363 — katalog saja tidak
+menambah mesh dasar).
 Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.

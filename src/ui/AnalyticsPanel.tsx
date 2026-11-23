@@ -11,6 +11,7 @@
 import type { AnalyticsData } from '../simulation/analytics';
 import { analyticsToCsv } from '../simulation/analytics';
 import { STATUS_LABEL } from '../types/agent';
+import { WORLD_OBJECT_CATALOG, WORLD_OBJECT_KIND_ORDER } from '../types/worldObject';
 import { formatClock, PERIOD_LABEL, WEATHER_ICON, WEATHER_LABEL } from '../simulation/lifeSim';
 
 interface Props {
@@ -163,7 +164,9 @@ export function AnalyticsPanel({ data, onClose }: Props) {
         {data.env
           ? `Jam ${formatClock(data.env.minutesOfDay)} · ${PERIOD_LABEL[data.env.period]} · ${WEATHER_ICON[data.env.weather]} ${WEATHER_LABEL[data.env.weather]}`
           : 'Jam: —'}
-        {` · Objek builder: ${data.objects.total} (pohon ${data.objects.byKind.tree}, bangku ${data.objects.byKind.bench}, lampu ${data.objects.byKind.lamp}, air mancur ${data.objects.byKind.fountain})`}
+        {` · Objek builder: ${data.objects.total} (${WORLD_OBJECT_KIND_ORDER.filter((k) => data.objects.byKind[k] > 0)
+          .map((k) => `${WORLD_OBJECT_CATALOG[k].label.toLowerCase()} ${data.objects.byKind[k]}`)
+          .join(', ') || 'belum ada'})`}
       </p>
     </section>
   );

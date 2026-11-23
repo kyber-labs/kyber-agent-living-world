@@ -68,6 +68,12 @@ function App() {
   const [objects, setObjects] = useState<WorldObject[]>([]);
   const [buildMode, setBuildMode] = useState<BuildMode | null>(null);
   const [placementError, setPlacementError] = useState<string | null>(null);
+  // Phase 8.3: label opsional + putaran (derajat) untuk penempatan/pindah,
+  // dan posisi kursor di tanah saat mode bangun aktif.
+  const [placementLabel, setPlacementLabel] = useState('');
+  const [placementRotation, setPlacementRotation] = useState(0);
+  const [hoverPos, setHoverPos] = useState<{ x: number; z: number } | null>(null);
+  const hoverPosRef = useRef<{ x: number; z: number } | null>(null);
   // Phase 8.1: layout sidebar + feed aktivitas + pengaturan.
   const [section, setSection] = useState<Section>('agents');
   const [activities, setActivities] = useState<ActivityEntry[]>([]);
@@ -117,6 +123,7 @@ function App() {
     if (next !== 'builder') {
       setBuildMode(null);
       setPlacementError(null);
+      resetPlacementForm();
     }
   }
 
@@ -412,8 +419,16 @@ function App() {
   }
 
   // Phase 6: world builder.
+  function resetPlacementForm(): void {
+    setPlacementLabel('');
+    setPlacementRotation(0);
+    setHoverPos(null);
+    hoverPosRef.current = null;
+  }
+
   function handlePickKind(kind: WorldObjectKind): void {
     setPlacementError(null);
+    resetPlacementForm();
     setBuildMode((prev) =>
       prev !== null && prev.kind === kind && prev.movingId === null ? null : { kind, movingId: null },
     );
@@ -423,6 +438,9 @@ function App() {
     const obj = objects.find((o) => o.id === id);
     if (!obj) return;
     setPlacementError(null);
+    // 8.3: form pindah diisi dari objek yang ada (label + putaran lama).
+    setPlacementLabel(obj.label ?? '');
+    setPlacementRotation(((((obj.rotY * 180) / Math.PI) % 360) + 360) % 360);
     setBuildMode({ kind: obj.kind, movingId: id });
   }
 
@@ -443,29 +461,49 @@ function App() {
       return;
     }
     const buildings = handle.getCityInfo().buildings;
+    const rotY = (placementRotation * Math.PI) / 180;
     if (buildMode.movingId) {
-      const err = validatePlacement(x, z, objects, buildings, buildMode.movingId);
+      const moving = objects.find((o) => o.id === buildMode.movingId);
+      const err = validatePlacement(x, z, objects, buildings, buildMode.movingId, moving?.kind);
       if (err) {
         setPlacementError(err);
         return;
       }
-      objectStoreRef.current?.moveObject(buildMode.movingId, x, z);
+      objectStoreRef.current?.moveObject(buildMode.movingId, x, z, rotY, placementLabel);
       setBuildMode(null);
       setPlacementError(null);
+      resetPlacementForm();
       return;
     }
-    const err = validatePlacement(x, z, objects, buildings);
+    const err = validatePlacement(x, z, objects, buildings, undefined, buildMode.kind);
     if (err) {
       setPlacementError(err);
       return;
     }
-    const placed = objectStoreRef.current?.addObject({ kind: buildMode.kind, x, z });
+    const placed = objectStoreRef.current?.addObject({
+      kind: buildMode.kind,
+      x,
+      z,
+      label: placementLabel,
+      rotY,
+    });
     if (placed) {
+      const name = placed.label ? `"${placed.label}"` : WORLD_OBJECT_CATALOG[placed.kind].label;
       activityStoreRef.current?.add(
-        `Objek ditempatkan: ${WORLD_OBJECT_CATALOG[placed.kind].label} (${placed.x.toFixed(1)}, ${placed.z.toFixed(1)})`,
+        `Objek ditempatkan: ${name} (${placed.x.toFixed(1)}, ${placed.z.toFixed(1)})`,
       );
     }
     setPlacementError(null);
+  }
+
+  // 8.3: posisi kursor di tanah — hanya simpan bila berubah (dibulatkan
+  // 0,1) supaya pointermove tidak me-render ulang React tiap piksel.
+  function handleGroundHover(x: number, z: number): void {
+    const rounded = { x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10 };
+    const prev = hoverPosRef.current;
+    if (prev && prev.x === rounded.x && prev.z === rounded.z) return;
+    hoverPosRef.current = rounded;
+    setHoverPos(rounded);
   }
 
   const selectedDoingTask = selected
@@ -534,6 +572,7 @@ function App() {
             onPerf={handlePerf}
             worldHandle={worldHandle}
             onGroundClick={handleGroundClick}
+            onGroundHover={handleGroundHover}
             isBuildMode={() => buildMode !== null}
             showMinimap={showMinimap}
             showLabels={showLabels}
@@ -586,10 +625,16 @@ function App() {
               objects={objects}
               buildMode={buildMode}
               placementError={placementError}
+              label={placementLabel}
+              rotationDeg={placementRotation}
+              hoverPosition={buildMode ? hoverPos : null}
+              onLabelChange={setPlacementLabel}
+              onRotationChange={setPlacementRotation}
               onPickKind={handlePickKind}
               onCancelBuild={() => {
                 setBuildMode(null);
                 setPlacementError(null);
+                resetPlacementForm();
               }}
               onMove={handleMoveObject}
               onDelete={handleDeleteObject}

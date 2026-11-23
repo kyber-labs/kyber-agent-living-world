@@ -19,7 +19,9 @@ import type { MeetingAssignment, MeetingRoom } from '../../types/meeting';
 import { MEETING_ROOMS } from '../../types/meeting';
 import type { EventAssignment } from '../../types/event';
 import type { WorldObject } from '../../types/worldObject';
+import { isAnimalKind, type BuilderAnimalKind } from '../../types/worldObject';
 import { buildWorldObject } from '../buildings/props';
+import { BuilderAnimals } from '../animals/BuilderAnimals';
 import { createWorldClock } from '../../simulation/clock';
 import { FpsTracker } from '../../simulation/fps';
 import { LifeSim, type EnvironmentState, type Vitals, type WeatherKind } from '../../simulation/lifeSim';
@@ -71,6 +73,8 @@ export interface WorldOptions {
   onPerf?: (stats: PerfStats) => void;
   /** Dipanggil saat mode bangun aktif dan pengguna mengklik tanah. */
   onGroundClick?: (x: number, z: number) => void;
+  /** Dipanggil saat mode bangun aktif dan kursor menyorot tanah (8.3). */
+  onGroundHover?: (x: number, z: number) => void;
   /** True saat mode bangun (penempatan/pindah objek) sedang aktif. */
   isBuildMode?: () => boolean;
 }
@@ -261,6 +265,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   // Hewan ambient Phase 8.2 — dekorasi yang berkeliaran (bukan agent).
   const animals = new Animals(scene);
 
+  // Hewan dari panel Builder (8.3) — titik rumahnya ditentukan Bos.
+  const builderAnimals = new BuilderAnimals(scene);
+
   // Cincin seleksi di bawah agent terpilih.
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.55, 0.75, 32),
@@ -339,6 +346,22 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   }
   renderer.domElement.addEventListener('pointerdown', onPointerDown);
   renderer.domElement.addEventListener('pointerup', onPointerUp);
+  // 8.3: posisi kursor di tanah saat mode bangun aktif — ditampilkan di
+  // panel Builder ("Posisi kursor: (x, z)") supaya Bos tahu persis titik
+  // penempatannya sebelum mengklik.
+  function onPointerMove(e: PointerEvent): void {
+    if (!options.isBuildMode?.() || !options.onGroundHover) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const groundHits = raycaster.intersectObject(ground, false);
+    if (groundHits.length > 0) {
+      const p = groundHits[0].point;
+      options.onGroundHover(p.x, p.z);
+    }
+  }
+  renderer.domElement.addEventListener('pointermove', onPointerMove);
 
   const resizeObserver = new ResizeObserver(() => {
     const w = container.clientWidth;
@@ -362,6 +385,7 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     const t = clock.elapsed();
     behavior.update(dt, t);
     animals.update(dt, t);
+    builderAnimals.update(dt, t);
     characters.forEach((character) => character.update(dt, t));
     // Life sim: jam + cuaca + vital (emit ke React maksimal 1x/detik).
     const life = lifeSim.update(dt, liveState);
@@ -413,6 +437,7 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     resizeObserver.disconnect();
     renderer.domElement.removeEventListener('pointerdown', onPointerDown);
     renderer.domElement.removeEventListener('pointerup', onPointerUp);
+    renderer.domElement.removeEventListener('pointermove', onPointerMove);
     rainGeo.dispose();
     (rain.material as THREE.Material).dispose();
     controls.dispose();
@@ -435,7 +460,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     director.reset();
   }
 
-  /** Bangun ulang isi grup builder dari daftar objek (dipanggil tiap berubah). */
+  /** Bangun ulang isi grup builder dari daftar objek (dipanggil tiap berubah).
+   *  Objek statis dibangun sebagai Group primitif; hewan (8.3) dirender
+   *  BuilderAnimals sebagai InstancedMesh yang berkeliaran. */
   function setWorldObjects(objects: WorldObject[]): void {
     worldObjects = objects;
     while (builderGroup.children.length > 0) {
@@ -451,8 +478,15 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
       });
     }
     objects.forEach((o) => {
-      builderGroup.add(buildWorldObject(o.kind, o.x, o.z, o.rotY));
+      if (!isAnimalKind(o.kind)) {
+        builderGroup.add(buildWorldObject(o.kind, o.x, o.z, o.rotY));
+      }
     });
+    builderAnimals.setAnimals(
+      objects
+        .filter((o): o is WorldObject & { kind: BuilderAnimalKind } => isAnimalKind(o.kind))
+        .map((o) => ({ kind: o.kind, x: o.x, z: o.z })),
+    );
   }
 
   return {

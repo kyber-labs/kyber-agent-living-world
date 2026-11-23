@@ -15,6 +15,8 @@ interface Props {
   worldHandle: { current: WorldHandle | null };
   /** Dipanggil saat mode bangun aktif dan pengguna mengklik tanah. */
   onGroundClick: (x: number, z: number) => void;
+  /** Dipanggil saat mode bangun aktif dan kursor menyorot tanah (8.3). */
+  onGroundHover: (x: number, z: number) => void;
   /** True saat mode bangun (penempatan/pindah objek) sedang aktif. */
   isBuildMode: () => boolean;
   /** 8.1: tampilkan/sembunyikan minimap (pengaturan "Atur"). */
@@ -23,13 +25,14 @@ interface Props {
   showLabels: boolean;
 }
 
-export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, onPerf, worldHandle, onGroundClick, isBuildMode, showMinimap, showLabels }: Props) {
+export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, onPerf, worldHandle, onGroundClick, onGroundHover, isBuildMode, showMinimap, showLabels }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const onSelectRef = useRef(onSelect);
   const onAgentStateRef = useRef(onAgentState);
   const onLifeTickRef = useRef(onLifeTick);
   const onPerfRef = useRef(onPerf);
   const onGroundClickRef = useRef(onGroundClick);
+  const onGroundHoverRef = useRef(onGroundHover);
   const isBuildModeRef = useRef(isBuildMode);
 
   useEffect(() => {
@@ -38,6 +41,7 @@ export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTi
     onLifeTickRef.current = onLifeTick;
     onPerfRef.current = onPerf;
     onGroundClickRef.current = onGroundClick;
+    onGroundHoverRef.current = onGroundHover;
     isBuildModeRef.current = isBuildMode;
   });
 
@@ -51,6 +55,7 @@ export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTi
       onLifeTick: (vitals, env) => onLifeTickRef.current(vitals, env),
       onPerf: (stats) => onPerfRef.current(stats),
       onGroundClick: (x, z) => onGroundClickRef.current(x, z),
+      onGroundHover: (x, z) => onGroundHoverRef.current(x, z),
       isBuildMode: () => isBuildModeRef.current(),
     });
     worldHandle.current = handle;

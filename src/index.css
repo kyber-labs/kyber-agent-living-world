@@ -1186,6 +1186,45 @@ button.primary:disabled {
   font-size: 13px;
 }
 
+/* 8.3: form penempatan builder — label opsional + slider putaran. */
+.builder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.builder-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.builder-form input[type='text'] {
+  font: inherit;
+  font-weight: 400;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.builder-form input[type='range'] {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+.builder-form .assign-note {
+  margin: 0;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

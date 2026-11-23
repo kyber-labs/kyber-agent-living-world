@@ -8,6 +8,7 @@ import type { Task } from '../types/task';
 import type { Meeting } from '../types/meeting';
 import type { CityEvent } from '../types/event';
 import type { WorldObject, WorldObjectKind } from '../types/worldObject';
+import { WORLD_OBJECT_CATALOG, WORLD_OBJECT_KIND_ORDER } from '../types/worldObject';
 import type { EnvironmentState, Vitals } from './lifeSim';
 
 export interface AnalyticsData {
@@ -170,8 +171,10 @@ export function computeAnalytics(input: AnalyticsInput): AnalyticsData {
     }
   });
 
-  // Objek builder.
-  const byKind: Record<WorldObjectKind, number> = { tree: 0, bench: 0, lamp: 0, fountain: 0 };
+  // Objek builder (8.3: hitungan per jenis mengikuti katalog 21 item).
+  const byKind = Object.fromEntries(
+    (Object.keys(WORLD_OBJECT_CATALOG) as WorldObjectKind[]).map((k) => [k, 0]),
+  ) as Record<WorldObjectKind, number>;
   objects.forEach((o) => {
     byKind[o.kind] += 1;
   });
@@ -251,10 +254,10 @@ export function analyticsToCsv(data: AnalyticsData): string {
     ['Vital', 'Energi terendah', data.vitals.lowestEnergy ? `${data.vitals.lowestEnergy.name} (${data.vitals.lowestEnergy.energy})` : '-'],
     ['Aktivitas', 'Lokasi tersering', data.activity.topLocation ? `${data.activity.topLocation.name} (${data.activity.topLocation.count})` : '-'],
     ['World builder', 'Total objek', data.objects.total],
-    ['World builder', 'Pohon', data.objects.byKind.tree],
-    ['World builder', 'Bangku', data.objects.byKind.bench],
-    ['World builder', 'Lampu taman', data.objects.byKind.lamp],
-    ['World builder', 'Air mancur', data.objects.byKind.fountain],
+    // 8.3: satu baris per jenis katalog (21 item), bukan hanya 4 jenis lama.
+    ...WORLD_OBJECT_KIND_ORDER.map(
+      (k) => ['World builder', WORLD_OBJECT_CATALOG[k].label, data.objects.byKind[k]] as [string, string, number],
+    ),
   ];
   const header = 'Bagian,Metrik,Nilai';
   return [header, ...rows.map((r) => r.map(csvCell).join(','))].join('\n') + '\n';
