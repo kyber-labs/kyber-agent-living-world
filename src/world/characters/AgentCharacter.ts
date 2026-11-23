@@ -71,6 +71,7 @@ export class AgentCharacter {
   private readonly head = new THREE.Group();
   private labelCanvas: HTMLCanvasElement | null = null;
   private labelTexture: THREE.CanvasTexture | null = null;
+  private label: THREE.Sprite | null = null;
 
   constructor(
     agent: Agent,
@@ -174,6 +175,7 @@ export class AgentCharacter {
     // Label nama + peran + status.
     const label = this.makeLabelSprite();
     label.position.y = 2.05;
+    this.label = label;
     // 3.2: label ikut jadi target klik — WAJIB bawa agentId. Sebelumnya
     // traverse hanya memberi agentId ke Mesh, sehingga klik label
     // mengembalikan undefined dan membatalkan pilihan.
@@ -244,6 +246,11 @@ export class AgentCharacter {
     if (status === this.status) return;
     this.status = status;
     this.drawLabel();
+  }
+
+  /** 8.1: tampilkan/sembunyikan label nama (pengaturan "Atur"). */
+  setLabelVisible(visible: boolean): void {
+    if (this.label) this.label.visible = visible;
   }
 
   getStatus(): AgentStatus {

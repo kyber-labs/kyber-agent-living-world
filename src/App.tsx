@@ -7,6 +7,7 @@ import { TaskStore } from './simulation/taskStore';
 import { MeetingStore } from './simulation/meetingStore';
 import { EventStore } from './simulation/eventStore';
 import { WorldObjectStore } from './simulation/worldObjectStore';
+import { ActivityStore, countAgentActivity, type ActivityEntry } from './simulation/activityStore';
 import { roomSlotPositions, validateStartMeeting } from './simulation/meetingLogic';
 import { eventSlotPositions, isEventGathered, validateStartEvent } from './simulation/eventLogic';
 import { validatePlacement } from './simulation/builderLogic';
@@ -22,11 +23,17 @@ import { MeetingPanel } from './ui/MeetingPanel';
 import { EventsPanel } from './ui/EventsPanel';
 import { BuilderPanel, type BuildMode } from './ui/BuilderPanel';
 import { AnalyticsPanel } from './ui/AnalyticsPanel';
+import { Sidebar, type Section } from './ui/Sidebar';
+import { WallClock } from './ui/WallClock';
+import { ActivityPanel } from './ui/ActivityPanel';
+import { ActivityToast } from './ui/ActivityToast';
+import { SettingsPanel } from './ui/SettingsPanel';
 import { MEETING_ROOMS, getMeetingRoom } from './types/meeting';
 import type { Meeting, NewMeetingInput } from './types/meeting';
 import { EVENT_KINDS } from './types/event';
 import type { CityEvent, NewEventInput } from './types/event';
 import type { WorldObject, WorldObjectKind } from './types/worldObject';
+import { WORLD_OBJECT_CATALOG } from './types/worldObject';
 import type { WorldHandle, PerfStats } from './world/engine/createWorld';
 import type { CameraMode } from './world/camera/CameraDirector';
 import type { AgentStatus, LiveAgentState } from './types/agent';
@@ -47,13 +54,11 @@ function App() {
     Object.fromEntries(AGENTS.map((a) => [a.id, { status: 'idle' as AgentStatus, location: 'Plaza' }])),
   );
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [showBoard, setShowBoard] = useState(false);
   const [chatAgentId, setChatAgentId] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [assignNote, setAssignNote] = useState<string | null>(null);
   // Phase 5: meeting + life simulation.
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [showMeetings, setShowMeetings] = useState(false);
   const [vitals, setVitals] = useState<Record<string, Vitals>>({});
   const [env, setEnv] = useState<EnvironmentState | null>(null);
   // Phase 7: statistik performa nyata (FPS + draw call), diperbarui 1x/detik.
@@ -61,11 +66,14 @@ function App() {
   // Phase 6: acara olahraga/hiburan, world builder, analytics.
   const [events, setEvents] = useState<CityEvent[]>([]);
   const [objects, setObjects] = useState<WorldObject[]>([]);
-  const [showEvents, setShowEvents] = useState(false);
-  const [showBuilder, setShowBuilder] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const [buildMode, setBuildMode] = useState<BuildMode | null>(null);
   const [placementError, setPlacementError] = useState<string | null>(null);
+  // Phase 8.1: layout sidebar + feed aktivitas + pengaturan.
+  const [section, setSection] = useState<Section>('agents');
+  const [activities, setActivities] = useState<ActivityEntry[]>([]);
+  const [toast, setToast] = useState<ActivityEntry | null>(null);
+  const [showLabels, setShowLabels] = useState(true);
+  const [showMinimap, setShowMinimap] = useState(true);
   const worldHandle = useRef<WorldHandle | null>(null);
   const storeRef = useRef<TaskStore | null>(null);
   if (!storeRef.current) storeRef.current = new TaskStore();
@@ -75,11 +83,18 @@ function App() {
   if (!eventStoreRef.current) eventStoreRef.current = new EventStore();
   const objectStoreRef = useRef<WorldObjectStore | null>(null);
   if (!objectStoreRef.current) objectStoreRef.current = new WorldObjectStore();
+  const activityStoreRef = useRef<ActivityStore | null>(null);
+  if (!activityStoreRef.current) activityStoreRef.current = new ActivityStore();
+  // Id aktivitas terakhir yang sudah ditampilkan sebagai toast — supaya
+  // toast yang ditutup tidak muncul lagi, dan entri lama (persisted)
+  // tidak memunculkan toast saat muat.
+  const lastToastIdRef = useRef<string | null>(null);
   const engine = useMemo(() => new AgentEngine(createLlmClient()), []);
   const selected = AGENTS.find((a) => a.id === selectedId) ?? null;
   const chatAgent = AGENTS.find((a) => a.id === chatAgentId) ?? null;
   const dbConfigured = isPersistenceConfigured();
   const openTasks = tasks.filter((t) => t.status !== 'done').length;
+  const counts = countAgentActivity(liveStates);
   const analytics = useMemo(
     () =>
       computeAnalytics({
@@ -95,14 +110,21 @@ function App() {
     [tasks, meetings, events, liveStates, vitals, env, objects],
   );
 
-  function closeAllPanels(): void {
-    setShowBoard(false);
-    setShowMeetings(false);
-    setShowEvents(false);
-    setShowBuilder(false);
-    setShowAnalytics(false);
-    setBuildMode(null);
-    setPlacementError(null);
+  // Phase 8.1: pindah bagian. Keluar dari Bangun membatalkan mode
+  // bangun/pindah (seperti closeAllPanels dulu).
+  function selectSection(next: Section): void {
+    setSection(next);
+    if (next !== 'builder') {
+      setBuildMode(null);
+      setPlacementError(null);
+    }
+  }
+
+  // Memilih agent (dari daftar atau klik figur 3D) selalu membuka bagian
+  // Agent supaya panel detailnya terlihat.
+  function handleSelectAgent(id: string | null): void {
+    setSelectedId(id);
+    if (id) setSection('agents');
   }
 
   useEffect(() => {
@@ -133,10 +155,47 @@ function App() {
     return store.subscribe(() => setObjects([...store.getObjects()]));
   }, []);
 
+  // Phase 8.1: langganan feed aktivitas. Toast hanya untuk entri BARU
+  // (id belum pernah tampil); entri lama dari localStorage tidak
+  // memunculkan toast saat muat.
+  useEffect(() => {
+    const store = activityStoreRef.current;
+    if (!store) return undefined;
+    setActivities([...store.getEntries()]);
+    lastToastIdRef.current = store.getEntries()[0]?.id ?? null;
+    return store.subscribe(() => {
+      const entries = store.getEntries();
+      setActivities([...entries]);
+      const latest = entries[0];
+      if (latest && latest.id !== lastToastIdRef.current) {
+        lastToastIdRef.current = latest.id;
+        setToast(latest);
+      }
+    });
+  }, []);
+
+  // Phase 8.1: toast hilang sendiri setelah ~5 detik.
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   // Phase 6: akhiri acara yang sudah melewati durasinya (cek tiap 5 detik).
+  // Phase 8.1: acara yang berakhir otomatis ikut tercatat di feed.
   useEffect(() => {
     const timer = window.setInterval(() => {
-      eventStoreRef.current?.endExpired(Date.now());
+      const store = eventStoreRef.current;
+      if (!store) return;
+      const activeBefore = store.getEvents().filter((e) => e.status === 'active');
+      store.endExpired(Date.now());
+      if (activeBefore.length === 0) return;
+      const endedIds = new Set(
+        store.getEvents().filter((e) => e.status === 'ended').map((e) => e.id),
+      );
+      activeBefore.forEach((e) => {
+        if (endedIds.has(e.id)) activityStoreRef.current?.add(`Acara selesai: "${e.title}"`);
+      });
     }, 5000);
     return () => window.clearInterval(timer);
   }, []);
@@ -260,17 +319,28 @@ function App() {
 
   function handleModeChange(mode: CameraMode): void {
     if (mode === 'follow' && !selectedId) {
-      setSelectedId('aria');
+      handleSelectAgent('aria');
     }
     setCameraMode(mode);
     worldHandle.current?.setCameraMode(mode);
   }
 
   function handleAddTask(input: NewTaskInput): void {
-    storeRef.current?.addTask(input);
+    const task = storeRef.current?.addTask(input);
+    if (!task) return;
+    const name = task.assigneeId
+      ? (AGENTS.find((a) => a.id === task.assigneeId)?.name ?? task.assigneeId)
+      : null;
+    activityStoreRef.current?.add(
+      name ? `Tugas baru: "${task.title}" → ${name}` : `Tugas baru: "${task.title}"`,
+    );
   }
 
   function handleMoveTask(id: string, status: TaskStatus): void {
+    const task = tasks.find((t) => t.id === id);
+    if (task && status === 'done' && task.status !== 'done') {
+      activityStoreRef.current?.add(`Tugas selesai: "${task.title}"`);
+    }
     storeRef.current?.moveTask(id, status);
   }
 
@@ -288,6 +358,7 @@ function App() {
       storeRef.current?.updateTask(taskId, { assigneeId: result.agentId });
       const name = AGENTS.find((a) => a.id === result.agentId)?.name ?? result.agentId;
       setAssignNote(`${task.title} → ${name}: ${result.reason}`);
+      activityStoreRef.current?.add(`Tugas "${task.title}" ditugaskan otomatis ke ${name}`);
     } else {
       setAssignNote(`Tidak ada agent yang bisa ditugaskan untuk "${task.title}".`);
     }
@@ -299,10 +370,15 @@ function App() {
     const err = validateStartMeeting(room, input.topic, input.participantIds, meetings, AGENTS, events);
     if (err) return err;
     meetingStoreRef.current?.startMeeting(input);
+    activityStoreRef.current?.add(`Meeting dimulai: "${input.topic}" di ${room.name}`);
     return null;
   }
 
   function handleEndMeeting(id: string): void {
+    const meeting = meetings.find((m) => m.id === id);
+    if (meeting && meeting.status === 'active') {
+      activityStoreRef.current?.add(`Meeting selesai: "${meeting.topic}"`);
+    }
     meetingStoreRef.current?.endMeeting(id);
   }
 
@@ -319,10 +395,15 @@ function App() {
     const err = validateStartEvent(input.kind, input.title, input.participantIds, events, meetings, AGENTS);
     if (err) return err;
     eventStoreRef.current?.startEvent(input);
+    activityStoreRef.current?.add(`Acara dimulai: "${input.title}"`);
     return null;
   }
 
   function handleEndEvent(id: string): void {
+    const event = events.find((e) => e.id === id);
+    if (event && event.status === 'active') {
+      activityStoreRef.current?.add(`Acara selesai: "${event.title}"`);
+    }
     eventStoreRef.current?.endEvent(id);
   }
 
@@ -346,6 +427,10 @@ function App() {
   }
 
   function handleDeleteObject(id: string): void {
+    const obj = objects.find((o) => o.id === id);
+    if (obj) {
+      activityStoreRef.current?.add(`Objek dihapus: ${WORLD_OBJECT_CATALOG[obj.kind].label}`);
+    }
     objectStoreRef.current?.deleteObject(id);
     setBuildMode((prev) => (prev?.movingId === id ? null : prev));
   }
@@ -374,7 +459,12 @@ function App() {
       setPlacementError(err);
       return;
     }
-    objectStoreRef.current?.addObject({ kind: buildMode.kind, x, z });
+    const placed = objectStoreRef.current?.addObject({ kind: buildMode.kind, x, z });
+    if (placed) {
+      activityStoreRef.current?.add(
+        `Objek ditempatkan: ${WORLD_OBJECT_CATALOG[placed.kind].label} (${placed.x.toFixed(1)}, ${placed.z.toFixed(1)})`,
+      );
+    }
     setPlacementError(null);
   }
 
@@ -387,66 +477,27 @@ function App() {
       <header className="app-header">
         <div className="header-title">
           <h1>AI Agent Living World</h1>
-          <span className="phase-badge">Phase 7 — Optimasi &amp; Dokumentasi</span>
+          <span className="live-badge" title="Aplikasi berjalan live">
+            <span className="live-dot" />
+            LIVE
+          </span>
+          <span className="phase-badge">Phase 8.1 — Layout &amp; Feed</span>
         </div>
-        <div className="header-actions">
-          <button
-            type="button"
-            onClick={() => {
-              const wasOpen = showMeetings;
-              closeAllPanels();
-              if (!wasOpen) setShowMeetings(true);
-            }}
-          >
-            Meeting
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const wasOpen = showEvents;
-              closeAllPanels();
-              if (!wasOpen) setShowEvents(true);
-            }}
-          >
-            Acara
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const wasOpen = showBuilder;
-              closeAllPanels();
-              if (!wasOpen) setShowBuilder(true);
-            }}
-          >
-            Builder
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const wasOpen = showAnalytics;
-              closeAllPanels();
-              if (!wasOpen) setShowAnalytics(true);
-            }}
-          >
-            Analitik
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const wasOpen = showBoard;
-              closeAllPanels();
-              if (!wasOpen) setShowBoard(true);
-            }}
-          >
-            Tugas ({openTasks})
-          </button>
+        <div className="header-status">
+          <span>
+            {counts.active} aktif · {counts.moving} berjalan
+          </span>
+          <WallClock />
           <button type="button" onClick={() => handleModeChange('overview')}>
             Reset kamera
           </button>
         </div>
       </header>
       <main className="app-main">
-        <AgentList agents={AGENTS} selectedId={selectedId} onSelect={setSelectedId} liveStates={liveStates} />
+        <Sidebar section={section} onSelect={selectSection} openTasks={openTasks} />
+        {section === 'agents' && (
+          <AgentList agents={AGENTS} selectedId={selectedId} onSelect={handleSelectAgent} liveStates={liveStates} />
+        )}
         <section className="world-wrap">
           <div className="camera-toolbar" role="group" aria-label="Mode kamera">
             {CAMERA_MODES.map((m) => (
@@ -464,13 +515,15 @@ function App() {
           <WorldView
             agents={AGENTS}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={handleSelectAgent}
             onAgentState={handleAgentState}
             onLifeTick={handleLifeTick}
             onPerf={handlePerf}
             worldHandle={worldHandle}
             onGroundClick={handleGroundClick}
             isBuildMode={() => buildMode !== null}
+            showMinimap={showMinimap}
+            showLabels={showLabels}
           />
           {buildMode && (
             <p className="build-banner">
@@ -480,7 +533,7 @@ function App() {
           {cameraMode === 'first-person' && (
             <p className="camera-hint">WASD / tombol panah untuk bergerak · seret untuk melihat sekeliling</p>
           )}
-          {showBoard && (
+          {section === 'tasks' && (
             <TaskBoard
               tasks={tasks}
               note={assignNote}
@@ -490,32 +543,32 @@ function App() {
               onAutoAssign={(id) => void handleAutoAssign(id)}
               assigningId={assigningId}
               onClose={() => {
-                setShowBoard(false);
+                selectSection('agents');
                 setAssignNote(null);
               }}
             />
           )}
-          {showMeetings && (
+          {section === 'meetings' && (
             <MeetingPanel
               meetings={meetings}
               onStart={handleStartMeeting}
               onEnd={handleEndMeeting}
               onAddNote={handleAddNote}
               onDelete={handleDeleteMeeting}
-              onClose={() => setShowMeetings(false)}
+              onClose={() => selectSection('agents')}
             />
           )}
-          {showEvents && (
+          {section === 'events' && (
             <EventsPanel
               events={events}
               liveStates={liveStates}
               onStart={handleStartEvent}
               onEnd={handleEndEvent}
               onDelete={handleDeleteEvent}
-              onClose={() => setShowEvents(false)}
+              onClose={() => selectSection('agents')}
             />
           )}
-          {showBuilder && (
+          {section === 'builder' && (
             <BuilderPanel
               objects={objects}
               buildMode={buildMode}
@@ -527,14 +580,29 @@ function App() {
               }}
               onMove={handleMoveObject}
               onDelete={handleDeleteObject}
-              onClose={() => {
-                setShowBuilder(false);
-                setBuildMode(null);
-                setPlacementError(null);
-              }}
+              onClose={() => selectSection('agents')}
             />
           )}
-          {showAnalytics && <AnalyticsPanel data={analytics} onClose={() => setShowAnalytics(false)} />}
+          {section === 'analytics' && <AnalyticsPanel data={analytics} onClose={() => selectSection('agents')} />}
+          {section === 'activity' && (
+            <ActivityPanel
+              entries={activities}
+              onClear={() => activityStoreRef.current?.clear()}
+              onClose={() => selectSection('agents')}
+            />
+          )}
+          {section === 'settings' && (
+            <SettingsPanel
+              showLabels={showLabels}
+              showMinimap={showMinimap}
+              onToggleLabels={setShowLabels}
+              onToggleMinimap={setShowMinimap}
+              providerName={engine.providerName}
+              engineMode={engine.mode}
+              dbConfigured={dbConfigured}
+              onClose={() => selectSection('agents')}
+            />
+          )}
           {chatAgent && (
             <AgentChat
               agent={chatAgent}
@@ -544,17 +612,20 @@ function App() {
               onClose={() => setChatAgentId(null)}
             />
           )}
+          {toast && !chatAgent && <ActivityToast entry={toast} onClose={() => setToast(null)} />}
           <p className="world-hint">
             Seret untuk memutar kamera · scroll untuk zoom · klik figur agent untuk memilih
           </p>
         </section>
-        <AgentDetail
-          agent={selected}
-          liveState={selected ? liveStates[selected.id] : undefined}
-          currentTask={selectedDoingTask}
-          vitals={selected ? vitals[selected.id] : undefined}
-          onChat={selected ? () => setChatAgentId(selected.id) : undefined}
-        />
+        {section === 'agents' && (
+          <AgentDetail
+            agent={selected}
+            liveState={selected ? liveStates[selected.id] : undefined}
+            currentTask={selectedDoingTask}
+            vitals={selected ? vitals[selected.id] : undefined}
+            onChat={selected ? () => setChatAgentId(selected.id) : undefined}
+          />
+        )}
       </main>
       <Hud agents={AGENTS} liveStates={liveStates} dbConfigured={dbConfigured} engineMode={engine.mode} tasks={tasks} env={env} perf={perf} />
     </div>

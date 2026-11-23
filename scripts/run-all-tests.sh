@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Uji gabungan — Phase 7.
-# Menjalankan SEMUA suite logika (Phase 5, 6, 6.1, 6.2, 7) lewat bundle
+# Uji gabungan — Phase 8.1.
+# Menjalankan SEMUA suite logika (Phase 5, 6, 6.1, 6.2, 7, 7.1, 8.1) lewat bundle
 # rolldown, lalu melaporkan total. Satu perintah dari root proyek:
 #   bash scripts/run-all-tests.sh
 # atau:
@@ -14,7 +14,7 @@
 set -u
 cd "$(dirname "$0")/.."
 
-SUITES="phase5 phase6 phase61 phase62 phase7 phase71"
+SUITES="phase5 phase6 phase61 phase62 phase7 phase71 phase81"
 total_pass=0
 total_fail=0
 failed_suites=""

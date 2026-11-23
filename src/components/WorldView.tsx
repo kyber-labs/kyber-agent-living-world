@@ -17,9 +17,13 @@ interface Props {
   onGroundClick: (x: number, z: number) => void;
   /** True saat mode bangun (penempatan/pindah objek) sedang aktif. */
   isBuildMode: () => boolean;
+  /** 8.1: tampilkan/sembunyikan minimap (pengaturan "Atur"). */
+  showMinimap: boolean;
+  /** 8.1: tampilkan/sembunyikan label nama agent di 3D (pengaturan "Atur"). */
+  showLabels: boolean;
 }
 
-export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, onPerf, worldHandle, onGroundClick, isBuildMode }: Props) {
+export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, onPerf, worldHandle, onGroundClick, isBuildMode, showMinimap, showLabels }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const onSelectRef = useRef(onSelect);
   const onAgentStateRef = useRef(onAgentState);
@@ -62,9 +66,16 @@ export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTi
     worldHandle.current?.selectAgent(selectedId);
   }, [selectedId, worldHandle]);
 
+  // 8.1: label nama mengikuti pengaturan "Atur". Efek ini dideklarasikan
+  // SETELAH efek mount di atas, jadi saat mount ia berjalan setelah
+  // dunia dibuat (worldHandle sudah terisi).
+  useEffect(() => {
+    worldHandle.current?.setLabelsVisible(showLabels);
+  }, [showLabels, worldHandle]);
+
   return (
     <div ref={containerRef} className="world-canvas" aria-label="Dunia 3D">
-      <Minimap worldHandle={worldHandle} />
+      {showMinimap && <Minimap worldHandle={worldHandle} />}
     </div>
   );
 }

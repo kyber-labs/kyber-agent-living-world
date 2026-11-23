@@ -50,6 +50,8 @@ export interface WorldHandle {
   setEventAssignment: (agentId: string, assignment: EventAssignment | null) => void;
   setEventActive: (locationId: 'arena' | 'stage', active: boolean) => void;
   setWorldObjects: (objects: WorldObject[]) => void;
+  /** 8.1: tampilkan/sembunyikan label nama semua agent (pengaturan "Atur"). */
+  setLabelsVisible: (visible: boolean) => void;
   getCameraState: () => CameraState;
   getCityInfo: () => CityInfo;
   getMeetingRooms: () => MeetingRoom[];
@@ -521,6 +523,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
       if (ring) ring.visible = active;
     },
     setWorldObjects,
+    setLabelsVisible: (visible: boolean) => {
+      characters.forEach((character) => character.setLabelVisible(visible));
+    },
     getCameraState: () => director.getState(),
     getCityInfo: () => city.info,
     getMeetingRooms: () => MEETING_ROOMS,

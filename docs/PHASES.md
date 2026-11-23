@@ -520,13 +520,93 @@ agent TIDAK berubah.
 - Verifikasi: `npm run build` lulus (dist identik Phase 7), dev +
   preview HTTP 200, `npm test` 161/161 lulus (tidak berubah).
 
+## Phase 8.1 — Layout baru + feed aktivitas ✅ SELESAI (23 Nov 2026)
+- Latar: proyek 7 fase + 7.1 + 7.2 tuntas live (commit 9a6d2a6). Bos
+  ingin tampilan seperti artifact "Kampus Nailong" yang ia lihat di
+  screenshot — tetapi artifact itu TIDAK bisa diakses dari sisi Muse
+  (browser perangkat: muse.ai diblokir ekstensi, ERR_BLOCKED_BY_CLIENT;
+  cloud browser: diblokir kebijakan organisasi; Bos sendiri mendapat
+  "Ruang belum tersedia"). Keputusan Bos 23 Nov 16:42: lanjut dari
+  screenshot saja. Keputusan Bos 23 Nov 16:43: mulai 8.1 dulu (layout
+  + feed); 8.2 (dunia lebih kaya) dan 8.3 (Builder 21 item) menyusul.
+- Isi 8.1 (hanya ini):
+  - Sidebar navigasi baru (`src/ui/Sidebar.tsx`): rel sempit 72px di
+    kiri dengan 9 item — Dunia, Agent, Tugas, Rapat, Acara, Bangun,
+    Analitik, Aktivitas, Atur. Acara adalah item ke-9 TAMBAHAN (tidak
+    ada di screenshot acuan yang hanya punya 8) supaya fitur Phase 6
+    tetap bisa dibuka — tanpanya Acara tidak punya jalan masuk dan
+    fitur lama hilang. Bagian aktif ditandai indigo tema aplikasi
+    (#6366F1), bukan hijau (hijau itu tema artifact lain). Ikon inline
+    SVG, tanpa emoji. Item Tugas membawa lencana jumlah tugas terbuka.
+    Setiap item membuka sesuatu yang berfungsi — tanpa tombol dekoratif.
+  - Header baru: judul + lencana "LIVE" (titik hijau) + hitungan
+    "X aktif · Y berjalan" + jam dinding WIB nyata (HH:MM:SS, berdetak
+    tiap detik via `Intl.DateTimeFormat` zona Asia/Jakarta) + tombol
+    Reset kamera (dipertahankan). "LIVE" di sini berarti aplikasi
+    berjalan live — BUKAN berarti agent mengeksekusi pekerjaan nyata
+    (agent tetap simulasi; lihat definisi di bawah).
+  - Feed aktivitas (`src/simulation/activityStore.ts`,
+    `src/ui/ActivityPanel.tsx`, `src/ui/ActivityToast.tsx`): store
+    pola TaskStore (localStorage `living-world-activity-v1`, maks 50
+    entri, terbaru di atas). Yang dicatat HANYA kejadian bermakna:
+    tugas dibuat/ditugaskan otomatis/selesai, meeting dimulai/diakhiri,
+    acara dimulai/diakhiri (termasuk berakhir otomatis), objek builder
+    ditempatkan/dihapus. Perubahan status ambient SENGAJA tidak
+    dicatat — status berubah tiap detik dan feed akan banjir (pelajaran
+    dari noise meeting ambient 6.2). Toast aktivitas terbaru tampil di
+    KIRI BAWAH (bukan tengah atas — pelajaran 7.2), hilang sendiri
+    ~5 detik, tombol X benar-benar menutupnya, dan toast yang ditutup
+    tidak muncul lagi tanpa aktivitas baru. Toast tidak tampil saat
+    panel chat terbuka (keduanya di kiri bawah — supaya tidak saling
+    menutupi).
+  - Panel Atur (`src/ui/SettingsPanel.tsx`): toggle label nama agent
+    di 3D (via `WorldHandle.setLabelsVisible` → `AgentCharacter.
+    setLabelVisible`) dan toggle minimap — keduanya benar-benar
+    berfungsi; blok "Tentang" (versi, nama provider/model LLM aktif
+    dari engine, status database).
+  - Badge header "Phase 8.1 — Layout & Feed", HUD "Fase 8.1/7 —
+    Layout & Feed" (tetap "/7": ini redesain pasca-7-fase, bukan fase
+    8 dari 7). Semua isi HUD lama dipertahankan (FPS/draw call nyata,
+    jam simulasi + cuaca, AI: Gemini live, Database).
+  - Dunia 3D, kamera, minimap, logika behavior/task/meeting/event,
+    dan `src/ai/*` TIDAK diubah (kecuali penambahan API
+    `setLabelsVisible` yang tidak mengubah perilaku default).
+- Definisi hitungan header (`countAgentActivity`): "aktif" = status
+  agent BUKAN idle (bekerja, meeting, berpindah, berpikir, olahraga,
+  hiburan, dsb.); "berjalan" = status moving. Agent tanpa status live
+  dihitung menganggur.
+- Definisi label "LIVE": aplikasi berjalan live di browser (bukan
+  simulasi statis). BUKAN klaim eksekusi pekerjaan nyata — agent
+  Living World tidak punya akses alat/file/layanan di luar aplikasi,
+  dan tidak menghasilkan artefak nyata. "Mode eksekusi nyata" di
+  screenshot acuan tidak terverifikasi dan TIDAK dibangun di sini.
+- Uji logika baru `scripts/phase81-test.ts`: ActivityStore (mulai
+  kosong, urutan terbaru di atas, batas 50, persist, hapus, langganan,
+  storage rusak, id unik saat tambah cepat), formatWib (16:43:25,
+  tengah malam 00:00:00 — bukan 24:00:00, nol di depan), definisi
+  hitungan aktif/berjalan. Toast/sidebar/toggle TIDAK diuji di level
+  logika (perilaku DOM) — verifikasi live oleh parent setelah deploy.
+- Verifikasi: `npm run build` lulus (dist `index-D5lFiOLC.js`, 905.207
+  byte; CSS `index-4NrvJihf.css`, 15.119 byte — naik dari Phase 7 karena
+  kode + gaya baru), dev (5199) + preview (5198) HTTP 200 termasuk aset
+  JS, `npm test` TOTAL 185 lulus, 0 gagal (Phase 5: 33, Phase 6: 49,
+  Phase 6.1: 25, Phase 6.2: 20, Phase 7: 18, 7.1: 16, 8.1: 24), lint 0
+  error (5 warning pola lama: akses ref saat render di App.tsx — pola
+  lazy-init store sejak Phase 4, ditambah 1 yang sama untuk
+  ActivityStore). Catatan jujur: 3 kegagalan uji awal ternyata ekspektasi
+  UJI yang salah (locale id-ID memisahkan jam dengan titik "16.43.25";
+  formatWib diperbaiki memakai formatToParts supaya "16:43:25" sesuai
+  spesifikasi) — bukan cacat aplikasi.
+
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
 bukan cacat) · Phase 7 ✅ (+7.1 — draw call live 289 dijelaskan, klaim
 "182"/"−34%" dikoreksi jadi 291/−30%; bukan cacat · +7.2 — toast
 "Kyber Agent — Bekerja…" terbukti overlay harness browser, bukan
-komponen aplikasi; bukan cacat). Live Phase 7
+komponen aplikasi; bukan cacat) · Phase 8.1 ✅ (layout sidebar + header
+live + feed aktivitas; Acara jadi item sidebar ke-9 supaya fitur Phase 6
+tetap bisa dibuka). Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.
 

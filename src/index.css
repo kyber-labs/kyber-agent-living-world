@@ -852,9 +852,27 @@ button.primary:disabled {
 }
 
 @media (max-width: 900px) {
+  .app-header {
+    flex-wrap: wrap;
+  }
+
   .app-main {
     flex-direction: column;
     overflow-y: auto;
+  }
+
+  /* 8.1: rel navigasi tetap di atas saat layar sempit (baris ikon). */
+  .nav-rail {
+    width: 100%;
+    flex-direction: row;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .nav-item {
+    flex: 1;
+    min-width: 56px;
   }
 
   .sidebar,
@@ -872,6 +890,212 @@ button.primary:disabled {
   .header-title h1 {
     font-size: 17px;
   }
+}
+
+/* Phase 8.1 — sidebar navigasi, header live, feed aktivitas, pengaturan. */
+.nav-rail {
+  width: 72px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 6px;
+  overflow-y: auto;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+}
+
+.nav-item:hover {
+  color: var(--primary);
+  border-color: var(--border);
+}
+
+.nav-item.active {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.nav-item svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-label {
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.nav-count {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.header-status button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 14px;
+}
+
+.header-status button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.wall-clock {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.activity-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.activity-item {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.activity-time {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.activity-text {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.activity-toast {
+  position: absolute;
+  left: 12px;
+  bottom: 48px;
+  z-index: 9;
+  width: min(420px, 70%);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #ffffff;
+  background: rgba(30, 41, 59, 0.92);
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(30, 41, 59, 0.3);
+}
+
+.activity-toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.activity-toast button {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.2;
+  padding: 0 2px;
+}
+
+.activity-toast button:hover {
+  color: #ffffff;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.settings-row input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.settings-about {
+  margin-top: 4px;
 }
 
 /* Phase 6 — world builder, acara, analytics. */
@@ -974,13 +1198,15 @@ button.primary:disabled {
 @media print {
   .app-header,
   .sidebar,
+  .nav-rail,
   .detail,
   .hud,
   .camera-toolbar,
   .world-canvas,
   .world-hint,
   .camera-hint,
-  .build-banner {
+  .build-banner,
+  .activity-toast {
     display: none !important;
   }
 
