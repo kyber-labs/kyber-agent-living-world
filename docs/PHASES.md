@@ -1001,6 +1001,47 @@ Builder; draw call 345 vs 363 (variasi live yang dikenal); dunia 3D,
 teks fase. Uji logika baru `scripts/phase831-test.ts` (28 assertion:
 skala jarak + offset gerombolan + konstanta); total uji 276 → 304.
 
+### 8.3.2 — Perbaikan kosmetik (bar petunjuk WASD bertumpuk dengan bar petunjuk umum) ✅ SELESAI (23 Nov 2026)
+
+Satu temuan live 8.2.1: di mode Orang Pertama, bar petunjuk WASD
+bertumpuk dengan bar petunjuk umum (`.world-hint`).
+
+Diagnosis (dari kode): `.world-wrap` adalah kolom flex
+(`display: flex; flex-direction: column; position: relative`) dengan
+kanvas (`.world-canvas`, `flex: 1`) di atas dan `.world-hint` sebagai
+strip in-flow di dasar kolom (padding 8px, huruf 13px — tinggi total
+~35px). Pil petunjuk WASD (`.camera-hint`, hanya dirender saat
+`cameraMode === 'first-person'`) diposisikan `absolute; left: 12px;
+bottom: 12px` terhadap `.world-wrap` — jadi ia duduk 12px di atas
+tepi bawah wadah, tepat di atas strip `.world-hint`, dan keduanya
+bertumpuk ~23px secara vertikal (pil ~31px tinggi di atas strip ~35px)
+serta horizontal (pil di kiri menutupi teks strip yang membentang
+penuh). Pil itu HANYA tampil di mode Orang Pertama (JSX kondisional
+di `App.tsx`); mode lain tidak pernah punya dua bar.
+Perbaikan (cara yang dipilih: gabung ke satu bar — bukan geser pil ke
+atas, karena tinggi strip `.world-hint` tidak tetap: ia membungkus
+ke 2 baris di layar sempit / saat panel overlay terbuka memberi
+`padding-right`, jadi offset `bottom` tetap akan bertumpuk di sebagian
+viewport): pil `.camera-hint` dihapus dari `App.tsx` dan aturan CSS-nya
+dihapus dari `index.css` (termasuk dari daftar print); `.world-hint`
+kini menampilkan teks gabungan saat mode Orang Pertama aktif —
+"WASD / tombol panah untuk bergerak · seret untuk melihat sekeliling ·
+scroll untuk zoom · klik figur agent untuk memilih" — dan teks lama
+("Seret untuk memutar kamera · …") di mode lain. Kini hanya ada SATU
+bar petunjuk di semua mode, jadi tumpukan tidak mungkin terjadi di
+viewport mana pun, panel overlay terbuka maupun tertutup (aturan
+`padding-right` `.has-panel` 8.1.1 tetap berlaku pada bar ini).
+Perubahan tampilan di mode Orang Pertama: petunjuk WASD pindah dari pil
+gelap di atas kanvas ke teks di strip bawah — tidak ada lagi yang
+menutupi pandangan 3D.
+
+**Yang TIDAK diubah:** label agent/ruangan (8.3.1), pil Mode bangun /
+`.top-overlays` (8.3.1), mode bangun bertahan saat panel ditutup (itu
+perubahan perilaku, bukan kosmetik ini), Supabase, dunia 3D,
+`src/ai/*`, logika behavior/task/meeting/event, katalog Builder 8.3,
+teks fase. Perbaikan murni tampilan — tidak ada logika murni yang bisa
+diuji, jadi tidak ada uji baru (total uji tetap 304).
+
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
@@ -1020,7 +1061,9 @@ Builder berkeliaran; draw call dasar TETAP 363 — katalog saja tidak
 menambah mesh dasar) · Phase 8.3.1 ✅ (banner bangun di bawah pill
 kamera via `.top-overlays`; label ruangan sembunyi di Ikuti Agent /
 Orang Pertama; label agent mengecil saat kamera dekat + menumpuk
-vertikal saat bergerombol — uji 28 assertion).
+vertikal saat bergerombolan — uji 28 assertion) · Phase 8.3.2 ✅
+(petunjuk WASD digabung ke `.world-hint` di mode Orang Pertama —
+pil `.camera-hint` terpisah yang bertumpuk dihapus).
 Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.

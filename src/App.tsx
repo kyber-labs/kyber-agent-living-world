@@ -589,9 +589,11 @@ function App() {
             showLabels={showLabels}
             showRoomLabels={cameraMode !== 'follow' && cameraMode !== 'first-person'}
           />
-          {cameraMode === 'first-person' && (
-            <p className="camera-hint">WASD / tombol panah untuk bergerak · seret untuk melihat sekeliling</p>
-          )}
+          {/* 8.3.2: di mode Orang Pertama, petunjuk WASD digabung ke dalam
+              .world-hint di bawah (lihat bar petunjuk di akhir section) —
+              pil .camera-hint terpisah dihapus: ia absolute (bottom 12px)
+              sementara .world-hint adalah strip in-flow di dasar kolom,
+              jadi keduanya bertumpuk. Kini hanya ada satu bar. */}
           {section === 'tasks' && (
             <TaskBoard
               tasks={tasks}
@@ -678,8 +680,18 @@ function App() {
             />
           )}
           {toast && !chatAgent && <ActivityToast entry={toast} onClose={() => setToast(null)} />}
+          {/* 8.3.2: di mode Orang Pertama petunjuk WASD digabung ke dalam
+              bar ini — dulu ada pil .camera-hint terpisah (absolute,
+              bottom 12px) yang bertumpuk dengan bar ini, karena bar ini
+              adalah strip in-flow di dasar .world-wrap (kolom flex) dan
+              pil itu duduk tepat di atasnya. Kini hanya ada satu bar,
+              jadi tumpukan tidak mungkin terjadi di viewport mana pun,
+              panel terbuka maupun tertutup (aturan padding-right
+              .has-panel 8.1.1 tetap berlaku). Mode lain tidak berubah. */}
           <p className="world-hint">
-            Seret untuk memutar kamera · scroll untuk zoom · klik figur agent untuk memilih
+            {cameraMode === 'first-person'
+              ? 'WASD / tombol panah untuk bergerak · seret untuk melihat sekeliling · scroll untuk zoom · klik figur agent untuk memilih'
+              : 'Seret untuk memutar kamera · scroll untuk zoom · klik figur agent untuk memilih'}
           </p>
         </section>
         {section === 'agents' && (
