@@ -353,7 +353,10 @@ agent TIDAK berubah.
   `requestAnimationFrame` (jendela 120 frame terakhir, delta 0 / >=1000 ms
   diabaikan supaya jeda tab tidak merusak rata-rata) dan melaporkannya ke
   React maksimal 1x/detik bersama `renderer.info.render.calls` (jumlah
-  draw call frame terakhir). HUD menampilkan mis. "60 FPS · 182 draw".
+  draw call frame terakhir). HUD menampilkan mis. "60 FPS · 291 draw"
+  (koreksi 7.1: angka draw = main pass 192 + shadow pass 99;
+  contoh "182" di versi awal dokumen ini SALAH — itu hitungan main-pass
+  saja dan kurang hitung; lihat §7.1).
   Angka FPS-nya nyata dari perangkat yang membuka aplikasi — bukan
   karangan. FPS live di perangkat Bos/penguji TIDAK bisa diukur dari
   lingkungan pengembangan (tanpa GPU/browser) — menjadi bagian verifikasi
@@ -365,9 +368,12 @@ agent TIDAK berubah.
   `scripts/phase7-test.ts` (posisi/rotasi/skala sama persis seperti Mesh
   aslinya); `computeBoundingSphere()` dipanggil eksplisit supaya mesh
   tidak ter-cull keliru. Hitungan draw call (dihitung dari kode, bukan
-  diukur live): kota statis 167 → 74 draw call (−93, −56%); total per
-  frame ±275 → ±182 (−34%, karakter agent ±100 draw call tidak berubah
-  karena beranimasi individual). Angka live (HUD "draw") menjadi bagian
+  diukur live — KOREKSI 7.1: angka di versi awal dokumen ini SALAH):
+  main pass 192 (bukan 182 — menara kantor 1 Mesh × 6 grup material =
+  6 draw call, agent 106 bukan ~100) + shadow pass 99 = total 291
+  (live: 289, selisih 2 = variasi keadaan live). Pra-instancing total
+  415 (main 285 + shadow 130) → 291 (−124, −30%). Detail + bukti
+  lengkap di §7.1 di bawah. Angka live (HUD "draw") menjadi bagian
   verifikasi live setelah deploy.
 - **Sudah ada sejak dulu, diverifikasi tetap berlaku (tidak diubah)**:
   pixel ratio dibatasi maks 2 (`createWorld.ts` — layar rapat 3x tidak
@@ -387,9 +393,9 @@ agent TIDAK berubah.
 ### Pengujian (konsolidasi)
 - **Satu perintah uji gabungan**: `npm test` (= `bash
   scripts/run-all-tests.sh`) menjalankan SEMUA suite logika lewat bundle
-  rolldown dan melaporkan total — **145 lulus, 0 gagal** (Phase 5: 33,
-  Phase 6: 49, Phase 6.1: 25, Phase 6.2: 20, Phase 7: 18). Semua suite
-  lama lulus TANPA mengubah assertion lama.
+  rolldown dan melaporkan total — **161 lulus, 0 gagal** (Phase 5: 33,
+  Phase 6: 49, Phase 6.1: 25, Phase 6.2: 20, Phase 7: 18, 7.1: 16).
+  Semua suite lama lulus TANPA mengubah assertion lama.
 - **Uji baru** `scripts/phase7-test.ts` (18 assertion): FpsTracker
   (tanpa data → 0; delta tetap 16,67 ms → 60 FPS; 33,33 ms → 30;
   campuran → 40; jeda panjang + delta 0 diabaikan; jendela dibatasi 120
@@ -417,13 +423,64 @@ agent TIDAK berubah.
   yang dipakai kode (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
   `VITE_GEMINI_API_KEY`, `VITE_GEMINI_MODEL`) ada di sana.
 - Verifikasi: `npm run build` lulus, dev + preview HTTP 200, `npm test`
-  145/145 lulus, `npm run lint` 0 error.
+  161/161 lulus (145 saat Phase 7 + 16 dari 7.1), `npm run lint` 0 error.
+
+## Penyelidikan 7.1 — angka draw call live 289 vs hitungan "182" ✅ SELESAI (23 Nov 2026)
+- Temuan live Phase 7 (~15:55, deploy 1c1598f): HUD "3 FPS · 289 draw"
+  (lalu "4 FPS · 289 draw") vs ekspektasi "60 FPS · 182 draw". FPS 3–4
+  artefak browser pemeriksa (software rendering tanpa GPU; Antigravity
+  60 FPS di mesinnya) — BUKAN objek penyelidikan.
+- KESIMPULAN: angka HUD BENAR; yang salah adalah hitungan "182" Phase 7.
+  Tidak ada perubahan kode aplikasi (instancing bekerja) — hanya koreksi
+  klaim + uji baru yang mengunci hitungan yang benar.
+- Akar masalah — dua kesalahan hitung yang menumpuk:
+  1. **Shadow pass dilupakan.** `renderer.info.render.calls` (three.js
+     0.187) menghitung SEMUA draw call dalam satu `render()`: `info.reset()`
+     berjalan SEBELUM `shadowMap.render()`, dan tiap `renderBufferDirect`
+     — termasuk tiap grup material di shadow pass — menaikkan
+     `render.calls`. Jadi HUD = main pass + shadow pass. Shadow pass =
+     99 draw call (kota 30, ruang meeting 6, builder 3, agent 60).
+     Bukti: sumber three.js (`WebGLRenderer.render`,
+     `WebGLShadowMap.renderObject`, `WebGLInfo.update`) + hitung ulang
+     scene graph di `scripts/phase71-test.ts`.
+  2. **Main pass kurang hitung.** Main pass yang benar = 192, bukan 182:
+     menara kantor dihitung 1 padahal 1 Mesh × 6 grup material = 6 draw
+     call; agent ~100 padahal 106 (4 agent gaya rambut 1 mesh = 10 draw
+     call/agent, 6 agent gaya 2 mesh = 11). Hitungan "74" direproduksi
+     persis (kota naive 47 + room 24 + tanah/grid/plaza 3) — sumber
+     kesalahannya terlacak.
+- Hitung ulang yang benar (Overview (0,40,75), aspek 16:9, agent di
+  posisi awal, cerah, tanpa seleksi/acara):
+  - Main 192 = tanah/grid/plaza 3 + kota 52 + ruang meeting 24 +
+    builder 7 + agent 106. Sudut kamera hampir tidak berpengaruh (0
+    ter-cull pada aspek ≥1,2; 1 ter-cull pada aspek 1,0).
+  - Shadow 99 = kota 30 + meeting 6 + builder 3 + agent 60 (hanya 4
+    caster kota di luar frustum bayangan: 4 batu tepi).
+  - Total 291 vs live 289 — selisih 2 (0,7%) = variasi keadaan live
+    (aspek jendela pemeriksa, posisi agent saat itu; Monte Carlo
+    20 seed posisi agent acak: 261–291).
+- Penghematan instancing yang BENAR: main 285 → 192 (−93, −33%);
+  shadow 130 → 99 (−31, −24% — lebih kecil karena bounding sphere
+  InstancedMesh mencakup semua instansi, sehingga pohon tepi yang dulu
+  ter-cull sendiri di shadow pass kini ikut ter-render); TOTAL 415 →
+  291 (−124, −30%). Klaim lama "−34%" dikoreksi menjadi "−30%".
+- Instancing TERBUKTI bekerja: kota main pass 52 vs 145 pra-instancing;
+  bundle live mengandung "InstancedMesh".
+- Tidak ada perubahan `src/` pada 7.1 — hanya `docs/PHASES.md`,
+  `docs/ARCHITECTURE.md`, `scripts/phase71-test.ts` (16 assertion) +
+  `scripts/run-all-tests.sh` (tambah suite 7.1). Bundle tetap
+  `index-BL8yDAkx.js` (identik Phase 7).
+- Verifikasi: `npm run build` lulus (dist identik Phase 7), dev +
+  preview HTTP 200, `scripts/phase71-test.ts` 16/16 lulus, `npm test`
+  161/161 lulus.
 
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
-bukan cacat) · Phase 7 ✅. Semua terverifikasi live kecuali angka FPS +
-draw call Phase 7 (menunggu verifikasi live setelah deploy).
+bukan cacat) · Phase 7 ✅ (+7.1 — draw call live 289 dijelaskan, klaim
+"182"/"−34%" dikoreksi jadi 291/−30%; bukan cacat). Live Phase 7
+~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
+tanpa GPU.
 
 ## Backlog akhir (transparan — belum ada, jangan diklaim berfungsi)
 - Sinkronisasi meeting ke Supabase (tabel belum ada — butuh migrasi baru

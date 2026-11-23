@@ -14,7 +14,7 @@
 set -u
 cd "$(dirname "$0")/.."
 
-SUITES="phase5 phase6 phase61 phase62 phase7"
+SUITES="phase5 phase6 phase61 phase62 phase7 phase71"
 total_pass=0
 total_fail=0
 failed_suites=""

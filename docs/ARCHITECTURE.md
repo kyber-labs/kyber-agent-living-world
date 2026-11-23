@@ -98,8 +98,9 @@ Supabase (opsional) / localStorage (selalu)
 ## Performa (Phase 7)
 
 - **Instancing**: pohon (19), marka jalan (~36), dan rumah (10) digambar
-  sebagai `InstancedMesh` — 93 draw call lebih sedikit per frame
-  (dihitung dari kode; kota statis 167 → 74 draw call). Matriks instansi
+  sebagai `InstancedMesh` — main pass 93 draw call lebih sedikit
+  (285 → 192; total termasuk shadow pass 415 → 291, −30% — koreksi
+  7.1, lihat `docs/PHASES.md` §7.1). Matriks instansi
   dihitung helper murni yang diuji (`scripts/phase7-test.ts`); bounding
   sphere dihitung eksplisit supaya tidak ter-cull keliru.
 - **Pixel ratio** dibatasi maks 2 (`createWorld.ts`); **frustum culling**
