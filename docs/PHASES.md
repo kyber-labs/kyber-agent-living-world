@@ -474,11 +474,59 @@ agent TIDAK berubah.
   preview HTTP 200, `scripts/phase71-test.ts` 16/16 lulus, `npm test`
   161/161 lulus.
 
+## Penyelidikan 7.2 — toast "Kyber Agent — Bekerja…" menutupi tombol Meeting ✅ SELESAI (23 Nov 2026)
+- Temuan live Phase 7 (16:11, deploy 1c1598f): toast bertuliskan
+  "Kyber Agent — Bekerja…" muncul di tengah atas layar dan menutupi
+  tombol Meeting di header; tombol X-nya tidak menghilangkannya —
+  toast tetap tampil sampai akhir sesi verifikasi.
+- KESIMPULAN: toast itu BUKAN dari aplikasi ini. Tidak ada cacat UI
+  di kode aplikasi — tidak ada yang perlu (dan tidak ada yang bisa)
+  diperbaiki di repo ini.
+- Bukti (diperiksa dari source, bukan asumsi):
+  1. String "Kyber Agent" TIDAK ADA di mana pun di `src/`,
+     `index.html`, maupun `dist/` sebagai teks UI — yang ada hanya
+     URL/repo (`kyber-agent-living-world…`, `kyber-labs/…`) di dokumen.
+     Satu-satunya "Bekerja" di `src/` adalah label status agent
+     (`src/types/agent.ts`: `working: 'Bekerja'`), bukan toast.
+  2. Aplikasi TIDAK PUNYA komponen toast/notifikasi sama sekali
+     (grep `toast|banner|notif|popup` di `src/` hanya menemukan
+     `.build-banner` — lihat poin 3).
+  3. Satu-satunya overlay tengah-atas di aplikasi adalah `.build-banner`
+     (`src/App.tsx`, `src/index.css`): teksnya "Mode bangun — klik tanah
+     untuk menempatkan", HANYA tampil saat mode bangun aktif, dan
+     TIDAK PUNYA tombol X. Bukan toast yang dilaporkan.
+  4. "Kyber Agent" adalah nama asisten itu sendiri, dan "Bekerja…"
+     adalah status kerja — persis indikator status tugas browser
+     (Chrome extension) yang sedang menjalankan sesi verifikasi live.
+     Indikator itu tampil selama tugas browser berjalan ("sampai
+     akhir" sesi) dan tombol X-nya milik harness, bukan halaman —
+     karena itu klik X tidak menghilangkannya dan tidak ada kode
+     aplikasi yang mengendalikannya.
+- Akibatnya: tidak ada perubahan `src/` pada 7.2 — hanya bagian ini
+  di `docs/PHASES.md`. Mengubah posisi header/z-index aplikasi tidak
+  akan menggerakkan overlay harness dan hanya merusak layout untuk
+  semua pengguna demi artefak yang hanya muncul saat sesi verifikasi
+  live oleh agent — karena itu sengaja TIDAK dilakukan.
+- Panduan untuk verifikasi live berikutnya: abaikan overlay status
+  agent ("Kyber Agent — Bekerja…") saat menilai UI — ia bukan bagian
+  dari aplikasi dan tidak akan pernah terlihat oleh Bos saat membuka
+  situs sendiri di browser biasa. Bila overlay itu menutupi tombol
+  yang sedang diuji, geser/zoom tampilan atau uji tombol itu dari
+  sudut lain; JANGAN dilaporkan lagi sebagai cacat aplikasi kecuali
+  teks/komponen yang sama terbukti berasal dari `src/`.
+- Uji logika: TIDAK ADA — tidak ada logika murni yang bisa diuji
+  (elemennya tidak ada di aplikasi; ketiadaannya dibuktikan lewat
+  grep source, bukan lewat uji unit — uji palsu tidak dibuat).
+- Verifikasi: `npm run build` lulus (dist identik Phase 7), dev +
+  preview HTTP 200, `npm test` 161/161 lulus (tidak berubah).
+
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
 bukan cacat) · Phase 7 ✅ (+7.1 — draw call live 289 dijelaskan, klaim
-"182"/"−34%" dikoreksi jadi 291/−30%; bukan cacat). Live Phase 7
+"182"/"−34%" dikoreksi jadi 291/−30%; bukan cacat · +7.2 — toast
+"Kyber Agent — Bekerja…" terbukti overlay harness browser, bukan
+komponen aplikasi; bukan cacat). Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.
 
