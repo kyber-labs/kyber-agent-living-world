@@ -598,6 +598,50 @@ agent TIDAK berubah.
   formatWib diperbaiki memakai formatToParts supaya "16:43:25" sesuai
   spesifikasi) — bukan cacat aplikasi.
 
+### 8.1.1 — Perbaikan tampilan (tombol "Mulai meeting" + panel menutupi pill kamera)
+- Asal: verifikasi live Phase 8.1 (23 Nov 17:08, deploy fa8496f) menemukan
+  dua cacat tampilan kecil. Dieksekusi 23 Nov 17:11 atas ketukan Bos.
+- Cacat (a) — label tombol submit form meeting tak terlihat: tombol
+  "Mulai meeting" tampil sebagai kotak putih kosong di samping tombol
+  "Batal" yang normal; fungsinya tetap bekerja (cacat tampilan, bukan
+  fungsi). Penyebab (dari pembacaan kode, bukan tebakan): aturan
+  `.form-actions button` (index.css:719) — latar putih, tanpa `color` —
+  memiliki spesifisitas sama (0,1,1) dengan `button.primary` (index.css:
+  303) tetapi posisinya lebih akhir di file, sehingga menimpa
+  `background` tombol primer menjadi putih sementara `color: #ffffff`
+  dari `.primary` tetap berlaku: teks putih di atas latar putih.
+  Cacat yang sama juga menimpa tombol "Mulai acara" di EventsPanel
+  (sama-sama di dalam `.form-actions`); tombol "Simpan tugas"
+  (TaskBoard) dan "Kirim" (chat) tidak terdampak karena tidak berada
+  di dalam `.form-actions`. Perbaikan: aturan baru
+  `.form-actions button.primary` (spesifisitas 0,2,1) tepat setelah
+  `.form-actions button`, mengembalikan border/latar/teks primer.
+- Cacat (b) — panel samping menutupi pill mode kamera + bilah petunjuk:
+  saat panel overlay terbuka, pill kamera (tengah, z-index 5) dan
+  bilah petunjuk bawah (lebar penuh) tertutup sebagian oleh
+  `.board-overlay` (kanan, lebar min(780px, 94%), z-index 8).
+  Perbaikan: App.tsx menghitung `hasPanel` (bagian Tugas/Rapat/Acara/
+  Bangun/Analitik/Aktivitas/Atur — bagian Dunia/Agent tidak memakai
+  overlay) dan memberi kelas `has-panel` pada `.world-wrap`; CSS baru
+  (hanya layar lebar >900px) menggeser pill kamera ke kiri dalam strip
+  dunia yang masih terlihat (`max-width: calc(100% - min(780px, 94%)
+  - 24px)`, `overflow-x: auto`, tombol `flex-shrink: 0`) dan memberi
+  bilah petunjuk `padding-right` selebar panel supaya teksnya tetap
+  terbaca penuh. Pada layar sempit (≤900px, tata letak kolom) perilaku
+  tetap seperti sekarang.
+- TIDAK diubah: label agent bertumpuk saat bergerombol (dikenal sejak
+  3.2), panel chat yang menutupi sebagian minimap, tombol X toast
+  (keterbatasan alat verifikasi, bukan cacat kode), dunia 3D, kamera,
+  logika behavior/task/meeting/event, `src/ai/*`, warna tema.
+- Uji logika baru: TIDAK ADA — perbaikan murni tampilan (CSS + kelas
+  layout); uji palsu untuk tampilan tidak dibuat. `npm test` harus
+  tetap 185 lulus.
+- Verifikasi: `npm run build` lulus (dist `index-DUVYFGRa.js`, 905.339
+  byte — naik 132 byte dari 8.1; CSS `index-BLCfmURm.css`, 15.495
+  byte), dev (5199) + preview (5198) HTTP 200 termasuk aset JS + CSS,
+  `npm test` TOTAL 185 lulus, 0 gagal (tidak ada uji baru — perbaikan
+  murni tampilan), lint 0 error (5 warning pola lama).
+
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
@@ -606,7 +650,9 @@ bukan cacat) · Phase 7 ✅ (+7.1 — draw call live 289 dijelaskan, klaim
 "Kyber Agent — Bekerja…" terbukti overlay harness browser, bukan
 komponen aplikasi; bukan cacat) · Phase 8.1 ✅ (layout sidebar + header
 live + feed aktivitas; Acara jadi item sidebar ke-9 supaya fitur Phase 6
-tetap bisa dibuka). Live Phase 7
+tetap bisa dibuka) · Phase 8.1.1 ✅ (perbaikan tampilan: label tombol
+"Mulai meeting"/"Mulai acara" + pill kamera/bilah petunjuk saat panel
+terbuka). Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.
 

@@ -472,6 +472,19 @@ function App() {
     ? (tasks.find((t) => t.assigneeId === selected.id && t.status === 'doing') ?? null)
     : null;
 
+  // Perbaikan 8.1.1: panel overlay (Tugas/Rapat/Acara/Bangun/Analitik/
+  // Aktivitas/Atur) menutupi sisi kanan .world-wrap — kelas has-panel
+  // menggeser pill kamera + bilah petunjuk ke strip yang terlihat.
+  // Bagian Dunia/Agent tidak memakai overlay, jadi tidak perlu.
+  const hasPanel =
+    section === 'tasks' ||
+    section === 'meetings' ||
+    section === 'events' ||
+    section === 'builder' ||
+    section === 'analytics' ||
+    section === 'activity' ||
+    section === 'settings';
+
   return (
     <div className="app">
       <header className="app-header">
@@ -498,7 +511,7 @@ function App() {
         {section === 'agents' && (
           <AgentList agents={AGENTS} selectedId={selectedId} onSelect={handleSelectAgent} liveStates={liveStates} />
         )}
-        <section className="world-wrap">
+        <section className={hasPanel ? 'world-wrap has-panel' : 'world-wrap'}>
           <div className="camera-toolbar" role="group" aria-label="Mode kamera">
             {CAMERA_MODES.map((m) => (
               <button

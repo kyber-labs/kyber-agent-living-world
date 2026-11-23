@@ -265,6 +265,32 @@ button {
   border-top: 1px solid var(--border);
 }
 
+/* Perbaikan 8.1.1: saat panel overlay terbuka, panel (.board-overlay,
+   lebar min(780px, 94%), z-index 8) menutupi sisi kanan .world-wrap —
+   pill kamera (tengah, z-index 5) dan bilah petunjuk (lebar penuh)
+   tertutup sebagian. Saat panel terbuka, pill digeser ke kiri dalam
+   strip dunia yang masih terlihat (bisa digulir horizontal bila
+   strip lebih sempit dari pill) dan bilah petunjuk diberi padding
+   kanan selebar panel supaya teksnya tetap terbaca penuh. Hanya
+   untuk layar lebar (>900px); pada layar sempit tata letak kolom
+   tetap seperti sekarang. */
+@media (min-width: 901px) {
+  .world-wrap.has-panel .camera-toolbar {
+    left: 12px;
+    transform: none;
+    max-width: calc(100% - min(780px, 94%) - 24px);
+    overflow-x: auto;
+  }
+
+  .world-wrap.has-panel .camera-toolbar button {
+    flex-shrink: 0;
+  }
+
+  .world-wrap.has-panel .world-hint {
+    padding-right: calc(min(780px, 94%) + 12px);
+  }
+}
+
 .detail-card {
   border: 1px solid var(--border);
   border-top: 4px solid var(--primary);
@@ -721,6 +747,19 @@ button.primary:disabled {
   background: var(--surface);
   border-radius: 8px;
   padding: 7px 14px;
+}
+
+/* Perbaikan 8.1.1: .form-actions button (spesifisitas sama 0,1,1 dengan
+   button.primary, tapi posisinya lebih akhir di file) menimpa
+   background tombol .primary menjadi putih, sementara color: #ffffff
+   dari button.primary tetap berlaku — label putih di atas latar putih
+   sehingga "Mulai meeting" dan "Mulai acara" tampak sebagai kotak
+   putih kosong. Aturan ini (spesifisitas 0,2,1) mengembalikan warna
+   primer pada tombol submit di dalam form. */
+.form-actions button.primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
 }
 
 .error-text {
