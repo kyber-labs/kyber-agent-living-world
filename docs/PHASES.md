@@ -84,9 +84,14 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   tabel + migrasi + seed Supabase.
 - Keputusan Bos 23 Nov 04:02: **Gemini (tier gratis Google AI Studio)**.
   Engine provider-agnostic (`src/ai/llm.ts`); adaptor Gemini memanggil
-  `generativelanguage.googleapis.com` model `gemini-2.5-flash` (bisa diubah
+  `generativelanguage.googleapis.com` model `gemini-3.5-flash-lite` (bisa diubah
   via `VITE_GEMINI_MODEL`). Key lewat `VITE_GEMINI_API_KEY` — ikut ke
   bundle publik, WAJIB dibatasi ke referrer Vercel di AI Studio.
+- Perbaikan 24 Nov (4.1): model default `gemini-2.5-flash` tidak lagi
+  dilayani untuk project AI Studio baru (404 sejak 12 Nov 2026) — default
+  diganti `gemini-3.5-flash-lite`; pesan fallback chat/penugasan kini
+  menampilkan detail error asli (status HTTP + pesan Google) agar tidak
+  lagi menebak-nebak penyebab gagalnya.
 - LLM hanya dipanggil atas aksi pengguna (chat / penugasan otomatis) —
   hemat kuota free tier (~15 req/menit). Bila key kosong/gagal: mode
   simulasi lokal yang diberi label jelas, tidak diklaim sebagai AI.
@@ -100,6 +105,36 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   (tasks + chat_messages, RLS demo-terbuka; auth/RBAC fase lanjut).
 - Belum: kalender tugas (baru deadline di kartu), sinkronisasi chat ke
   Supabase (tabel ada, wiring menyusul), proksi server-side untuk key.
+
+### 4.1 — Detail error asli di fallback + default model 3.5-flash-lite ✅ SELESAI (24 Nov 2026)
+- Latar: penyelidikan kegagalan chat Gemini 23 Nov ~22:02 (Tono) —
+  balasan SIMULASI setelah ~90 dtk, penyebab tak bisa ditentukan karena
+  `src/ai/engine.ts` memakai `catch {` telanjang yang membuang detail
+  error. Chat pulih sendiri (gangguan sementara, uji ulang 22:30–22:31
+  live ~1 dtk); patch ini BUKAN perbaikan atas insiden itu, melainkan
+  agar kegagalan BERIKUTNYA terbaca. Penyebab insiden paling mungkin:
+  overload sisi Google (lihat penyelidikan Tono).
+- Perubahan (5 file, 2 baru): BARU `src/ai/errorDetail.ts`
+  (`formatLlmErrorDetail`, murni — potong 160 karakter, pesan kosong /
+  non-Error tetap aman); BARU `scripts/phase41-test.ts` (21 assertion);
+  `src/ai/engine.ts` — kedua `catch {` telanjang (chat + penugasan
+  otomatis) jadi `catch (err)` dan menyisipkan detail asli ke teks
+  fallback; `src/ai/llm.ts` — default model `gemini-2.5-flash` →
+  `gemini-3.5-flash-lite`; `docs/PHASES.md` (§4.1).
+- Perilaku fallback TIDAK berubah — hanya pesannya: chat tetap berawalan
+  `SIMULASI:` + `live: false`; penugasan tetap memakai aturan +
+  `live: false`. Yang baru: detail error asli termuat, mis.
+  `(Panggilan LLM gagal: Gemini HTTP 429: ...)`.
+- Cara membaca kegagalan berikutnya: 429 → kuota free tier habis;
+  400/403 → key salah/dicabut; 404 → model tidak tersedia;
+  503/timeout → Google/jaringan. Lencana "Gemini live" BUKAN
+  pemeriksaan kesehatan — ia hanya berarti key terpasang.
+- Catatan jujur: bagian 2 (default model) hanya hygiene/backstop untuk
+  deploy tanpa env var — live memakai env var `VITE_GEMINI_MODEL`, jadi
+  bagian 2 TIDAK relevan dengan insiden 23 Nov. Timeout/AbortController/
+  retry TIDAK masuk patch ini (keputusan desain terpisah). Jalur gagal
+  TIDAK bisa diuji live tanpa merusak key/env — verifikasi live hanya
+  jalur sukses (chat + penugasan otomatis tetap live).
 
 ## Phase 5 — Meeting room, kolaborasi, life simulation ✅ SELESAI (23 Nov 2026)
 - 6 ruang meeting (`src/types/meeting.ts` MEETING_ROOMS, dipetakan ke
@@ -1044,7 +1079,8 @@ diuji, jadi tidak ada uji baru (total uji tetap 304).
 
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
-(Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
+(Gemini live) · Phase 4.1 ✅ (detail error asli di fallback + default
+model 3.5-flash-lite; uji 21 assertion) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
 bukan cacat) · Phase 7 ✅ (+7.1 — draw call live 289 dijelaskan, klaim
 "182"/"−34%" dikoreksi jadi 291/−30%; bukan cacat · +7.2 — toast
 "Kyber Agent — Bekerja…" terbukti overlay harness browser, bukan
@@ -1076,11 +1112,6 @@ tanpa GPU.
 - Proksi server-side untuk key LLM (saat ini key ikut ke bundle publik;
   mitigasi saat ini = batasi referrer + API di Cloud Console — masih
   menunggu Bos mengaktifkan 2SV).
-- Default model kode `src/ai/llm.ts` masih `gemini-2.5-flash` (tidak
-  tersedia untuk project baru) — deploy mengandalkan env var
-  `VITE_GEMINI_MODEL=gemini-3.5-flash-lite` di Vercel; bila env var
-  terhapus, deploy baru gagal lagi. (Perbaikan yang pernah ditawarkan
-  sebagai patch 4.1 — belum dieksekusi.)
 - Jadwal meeting/acara ke depan (baru mulai langsung); pengingat/
   undangan meeting; kalender tugas (baru deadline di kartu).
 - Generator PDF sesungguhnya (saat ini hanya print browser via

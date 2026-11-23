@@ -27,7 +27,12 @@ export interface LlmClient {
 }
 
 const GEMINI_MODEL =
-  (import.meta.env.VITE_GEMINI_MODEL as string | undefined) || 'gemini-2.5-flash';
+  (import.meta.env.VITE_GEMINI_MODEL as string | undefined) ||
+  'gemini-3.5-flash-lite'; // Default diubah 24 Nov 2026 (patch 4.1):
+// gemini-2.5-flash sudah tidak dilayani untuk project AI Studio baru
+// (404 "no longer available to new users" sejak 12 Nov 2026);
+// gemini-3.5-flash-lite penggantinya. VITE_GEMINI_MODEL tetap bisa
+// menimpa default ini.
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
 
 interface GeminiPart {

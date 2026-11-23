@@ -8,6 +8,7 @@ import type { Agent, AgentStatus } from '../types/agent';
 import type { Task } from '../types/task';
 import { doingCount, isBlocked, pickBestAgentRule } from '../simulation/taskLogic';
 import type { LlmClient } from './llm';
+import { formatLlmErrorDetail } from './errorDetail';
 
 export interface ChatResult {
   text: string;
@@ -65,9 +66,12 @@ export class AgentEngine {
     try {
       const text = await this.llm.complete(messages);
       return { text, live: this.llm.mode === 'live' };
-    } catch {
+    } catch (err) {
+      // Tampilkan detail error asli (status HTTP + pesan Google), bukan
+      // pesan generik — supaya kegagalan berikutnya langsung terdiagnosis
+      // dari UI tanpa DevTools.
       return {
-        text: `SIMULASI: sebagai ${agent.role}, saya mencatat "${userText.slice(0, 80)}". (Panggilan LLM gagal — periksa API key / kuota.)`,
+        text: `SIMULASI: sebagai ${agent.role}, saya mencatat "${userText.slice(0, 80)}". (Panggilan LLM gagal: ${formatLlmErrorDetail(err)})`,
         live: false,
       };
     }
@@ -105,8 +109,8 @@ export class AgentEngine {
         reason: parsed.reason || `${picked.name} dipilih model.`,
         live: true,
       };
-    } catch {
-      return { agentId: rulePick, reason: `${ruleReason} (LLM gagal, fallback aturan)`, live: false };
+    } catch (err) {
+      return { agentId: rulePick, reason: `${ruleReason} (LLM gagal: ${formatLlmErrorDetail(err)}, fallback aturan)`, live: false };
     }
   }
 
