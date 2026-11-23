@@ -938,6 +938,69 @@ agent TIDAK berubah.
   `src/ai/*`, logika behavior/task/meeting/event, file Mission
   Control, sync Supabase objek Builder (tetap localStorage).
 
+### 8.3.1 — Perbaikan kosmetik (label bertumpuk + pil Mode bangun) ✅ SELESAI (23 Nov 2026)
+
+Tiga temuan live 8.2–8.3, semuanya tampilan (bukan logika):
+
+**1. Pil biru "Mode bangun" tertutup pill kamera saat panel Builder terbuka.**
+Diagnosis (dari kode): `.build-banner` diposisikan `top: 60px; left: 50%`
+(tengah-atas), sementara pill kamera saat panel terbuka bergeser ke strip
+kiri dan membungkus 2 baris (8.1.1/8.2.1). Strip kiri melebar seiring
+viewport (panel tetap 780px), jadi pada viewport lebar tepi kanan strip
+melewati tepi kiri banner — dan secara vertikal baris ke-2 pill (y ~48–84)
+memang bersinggungan dengan banner (y 60–88). Bukan khusus Builder:
+semua panel overlay + mode bangun/pindah kena.
+Perbaikan: toolbar + banner kini dalam satu wadah `.top-overlays`
+(kolom flex, gap 8px) — banner selalu tepat di bawah pill, jadi
+keduanya tak bisa bertumpuk, baik saat panel tertutup (tengah) maupun
+terbuka (strip kiri). Tanpa panel, posisi visual sama seperti sebelumnya
+(pill y 12, banner y ~56 — dulu 60). `pointer-events: none` pada wadah
+supaya klik di celahnya tembus ke kanvas; anak-anaknya tetap bisa diklik.
+Teks mode pindah ("Mode pindah — klik tanah tujuan") memakai elemen yang
+sama, ikut tertangani.
+
+**2. Label besar ruangan menutupi kartu nama agent di mode Ikuti Agent.**
+Diagnosis: label nama ruangan adalah sprite 3,4 × 0,85 unit di y 2,7
+(`meetingRooms.ts`); dari jarak kamera Ikuti Agent (~7,8 unit) ia tampak
+raksasa dan menumpuk label agent (2,2 × 0,83 di y 2,05).
+Perbaikan: `RoomVisuals.setLabelsVisible()` baru + `WorldHandle`
+`setRoomLabelsVisible()` — label ruangan disembunyikan saat mode Ikuti
+Agent / Orang Pertama aktif (konteks ruangan sudah ada di HUD/panel),
+ditampilkan lagi di Overview/Atas/Sinematik. Alas + cincin ruangan tetap
+terlihat, jadi identifikasi ruangan di Overview tak berubah.
+
+**3. Label nama agent bertumpuk saat bergerombol + membesar saat kamera dekat.**
+Diagnosis: label sprite berukuran dunia tetap (2,2 × 0,83 di y 2,05) —
+dari jarak dekat ia memenuhi layar, dan agent yang berdekatan punya label
+di ketinggian yang sama sehingga saling menutupi.
+Perbaikan (fungsi murni baru `src/simulation/labelLayout.ts`, diterapkan
+tiap frame di loop `createWorld`, via `AgentCharacter.setLabelLayout`):
+(a) skala label mengikuti jarak kamera — `clamp(jarak/12, 0,3, 1)`:
+di bawah 3,6 unit skala 0,3 (tetap terbaca, tak memenuhi layar), di atas
+12 unit skala penuh 1 (Overview/Atas/Sinematik tak berubah); di antaranya
+ukuran TAMPAK label konstan. Label di mode Ikuti Agent (~7,8 unit)
+tampil 0,65×. (b) offset vertikal gerombolan — pewarnaan graf greedy
+dalam urutan roster tetap (deterministik, tak berkedip): tiap agent
+mengambil tingkat terendah yang belum dipakai tetangga sebelumnya dalam
+jarak 2,2 unit; langkah = tinggi label penuh (0,85), jadi label dalam
+satu gerombolan tak pernah saling menutupi menurut proksi jarak dunia.
+Visibilitas label tetap milik pengaturan "Atur" (`setLabelVisible`);
+perbaikan ini hanya mengubah skala/posisi y.
+Batas jujur: proksi memakai jarak dunia horizontal, bukan proyeksi layar
+— dari sudut tertentu dua agent yang berjarak > 2,2 unit bisa saja
+labelnya bersinggungan di layar (mis. segaris dengan kamera). Dalam
+kerumunan sangat padat (≥ 4 agent dalam 2,2 unit) tumpukan teratas
+melayang cukup tinggi di atas kelompoknya. Bila Bos menginginkan
+jaminan "tak pernah bertumpuk" penuh, perlu proyeksi layar per frame —
+di luar lingkup perbaikan ini.
+
+**Yang TIDAK diubah:** tumpukan bar petunjuk WASD dengan bar petunjuk
+umum di mode Orang Pertama (item kosmetik terpisah); minimap objek
+Builder; draw call 345 vs 363 (variasi live yang dikenal); dunia 3D,
+`src/ai/*`, logika behavior/task/meeting/event, katalog Builder 8.3,
+teks fase. Uji logika baru `scripts/phase831-test.ts` (28 assertion:
+skala jarak + offset gerombolan + konstanta); total uji 276 → 304.
+
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
@@ -954,7 +1017,10 @@ Phase 8.2.1 ✅ (teks fase → 8.2 + pill kamera membungkus ke 2 baris
 saat panel overlay terbuka, tanpa scrollbar) · Phase 8.3 ✅ (Builder
 21 item + label/putaran/posisi kursor + bebek hanya di kolam + hewan
 Builder berkeliaran; draw call dasar TETAP 363 — katalog saja tidak
-menambah mesh dasar).
+menambah mesh dasar) · Phase 8.3.1 ✅ (banner bangun di bawah pill
+kamera via `.top-overlays`; label ruangan sembunyi di Ikuti Agent /
+Orang Pertama; label agent mengecil saat kamera dekat + menumpuk
+vertikal saat bergerombol — uji 28 assertion).
 Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.

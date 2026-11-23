@@ -23,6 +23,7 @@ import { isAnimalKind, type BuilderAnimalKind } from '../../types/worldObject';
 import { buildWorldObject } from '../buildings/props';
 import { BuilderAnimals } from '../animals/BuilderAnimals';
 import { createWorldClock } from '../../simulation/clock';
+import { computeLabelOffsets, labelScaleForDistance } from '../../simulation/labelLayout';
 import { FpsTracker } from '../../simulation/fps';
 import { LifeSim, type EnvironmentState, type Vitals, type WeatherKind } from '../../simulation/lifeSim';
 import { environmentTargets } from '../../simulation/environment';
@@ -56,6 +57,12 @@ export interface WorldHandle {
   setWorldObjects: (objects: WorldObject[]) => void;
   /** 8.1: tampilkan/sembunyikan label nama semua agent (pengaturan "Atur"). */
   setLabelsVisible: (visible: boolean) => void;
+  /**
+   * 8.3.1: tampilkan/sembunyikan label nama ruangan meeting. Dipanggil
+   * dari WorldView saat mode kamera berubah (sembunyi di Ikuti Agent /
+   * Orang Pertama — kamera dekat, label ruangan menutupi label agent).
+   */
+  setRoomLabelsVisible: (visible: boolean) => void;
   getCameraState: () => CameraState;
   getCityInfo: () => CityInfo;
   getMeetingRooms: () => MeetingRoom[];
@@ -387,6 +394,20 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     animals.update(dt, t);
     builderAnimals.update(dt, t);
     characters.forEach((character) => character.update(dt, t));
+    // 8.3.1: tata letak label agent tiap frame — skala mengikuti jarak
+    // kamera (label tak memenuhi layar saat kamera dekat) + offset
+    // vertikal saat bergerombol (label tak bertumpuk). Hanya skala dan
+    // posisi y yang diubah; visibilitas tetap milik pengaturan "Atur".
+    const labelPositions = agents.map((a) => {
+      const c = characters.get(a.id);
+      return { x: c?.group.position.x ?? 0, z: c?.group.position.z ?? 0 };
+    });
+    const labelOffsets = computeLabelOffsets(labelPositions);
+    agents.forEach((a, i) => {
+      const c = characters.get(a.id);
+      if (!c) return;
+      c.setLabelLayout(labelScaleForDistance(camera.position.distanceTo(c.group.position)), labelOffsets[i]);
+    });
     // Life sim: jam + cuaca + vital (emit ke React maksimal 1x/detik).
     const life = lifeSim.update(dt, liveState);
     if (life) {
@@ -508,6 +529,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     setWorldObjects,
     setLabelsVisible: (visible: boolean) => {
       characters.forEach((character) => character.setLabelVisible(visible));
+    },
+    setRoomLabelsVisible: (visible: boolean) => {
+      roomVisuals.setLabelsVisible(visible);
     },
     getCameraState: () => director.getState(),
     getCityInfo: () => city.info,

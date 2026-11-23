@@ -550,18 +550,29 @@ function App() {
           <AgentList agents={AGENTS} selectedId={selectedId} onSelect={handleSelectAgent} liveStates={liveStates} />
         )}
         <section className={hasPanel ? 'world-wrap has-panel' : 'world-wrap'}>
-          <div className="camera-toolbar" role="group" aria-label="Mode kamera">
-            {CAMERA_MODES.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className={cameraMode === m.id ? 'active' : ''}
-                aria-pressed={cameraMode === m.id}
-                onClick={() => handleModeChange(m.id)}
-              >
-                {m.label}
-              </button>
-            ))}
+          {/* 8.3.1: toolbar + banner bangun dalam satu kolom (.top-overlays)
+              — banner selalu tepat di bawah pill kamera, jadi keduanya tak
+              lagi bertumpuk saat panel terbuka (dulu banner tetap di tengah
+              sementara pill bergeser/membungkus ke strip kiri). */}
+          <div className="top-overlays">
+            <div className="camera-toolbar" role="group" aria-label="Mode kamera">
+              {CAMERA_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={cameraMode === m.id ? 'active' : ''}
+                  aria-pressed={cameraMode === m.id}
+                  onClick={() => handleModeChange(m.id)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {buildMode && (
+              <p className="build-banner">
+                {buildMode.movingId ? 'Mode pindah — klik tanah tujuan' : 'Mode bangun — klik tanah untuk menempatkan'}
+              </p>
+            )}
           </div>
           <WorldView
             agents={AGENTS}
@@ -576,12 +587,8 @@ function App() {
             isBuildMode={() => buildMode !== null}
             showMinimap={showMinimap}
             showLabels={showLabels}
+            showRoomLabels={cameraMode !== 'follow' && cameraMode !== 'first-person'}
           />
-          {buildMode && (
-            <p className="build-banner">
-              {buildMode.movingId ? 'Mode pindah — klik tanah tujuan' : 'Mode bangun — klik tanah untuk menempatkan'}
-            </p>
-          )}
           {cameraMode === 'first-person' && (
             <p className="camera-hint">WASD / tombol panah untuk bergerak · seret untuk melihat sekeliling</p>
           )}

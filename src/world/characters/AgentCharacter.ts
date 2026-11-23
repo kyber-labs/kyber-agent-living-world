@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import type { Agent, AgentStatus } from '../../types/agent';
 import { STATUS_COLOR, STATUS_LABEL } from '../../types/agent';
+import { LABEL_BASE_HEIGHT, LABEL_BASE_WIDTH, LABEL_BASE_Y } from '../../simulation/labelLayout';
 
 const HAIR_COLORS = ['#2b2b2b', '#5b3a26', '#8a5a3b', '#d9a05b', '#3b4756'];
 const SKIN_COLORS = ['#f2c9a0', '#e8b88a', '#d9a06b', '#f7d7b0'];
@@ -174,7 +175,7 @@ export class AgentCharacter {
 
     // Label nama + peran + status.
     const label = this.makeLabelSprite();
-    label.position.y = 2.05;
+    label.position.y = LABEL_BASE_Y;
     this.label = label;
     // 3.2: label ikut jadi target klik — WAJIB bawa agentId. Sebelumnya
     // traverse hanya memberi agentId ke Mesh, sehingga klik label
@@ -208,7 +209,7 @@ export class AgentCharacter {
     const sprite = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: this.labelTexture, transparent: true, depthWrite: false }),
     );
-    sprite.scale.set(2.2, 0.83, 1);
+    sprite.scale.set(LABEL_BASE_WIDTH, LABEL_BASE_HEIGHT, 1);
     return sprite;
   }
 
@@ -251,6 +252,18 @@ export class AgentCharacter {
   /** 8.1: tampilkan/sembunyikan label nama (pengaturan "Atur"). */
   setLabelVisible(visible: boolean): void {
     if (this.label) this.label.visible = visible;
+  }
+
+  /**
+   * 8.3.1: skala + offset vertikal label — dipanggil tiap frame dari
+   * createWorld (jarak kamera + gerombolan, lihat simulation/labelLayout).
+   * Hanya mengubah skala/posisi sprite, BUKAN visibilitas (pengaturan
+   * "Atur" tetap berkuasa lewat setLabelVisible).
+   */
+  setLabelLayout(scale: number, yOffset: number): void {
+    if (!this.label) return;
+    this.label.scale.set(LABEL_BASE_WIDTH * scale, LABEL_BASE_HEIGHT * scale, 1);
+    this.label.position.y = LABEL_BASE_Y + yOffset;
   }
 
   getStatus(): AgentStatus {

@@ -196,12 +196,31 @@ button {
   touch-action: none;
 }
 
-.camera-toolbar {
+/* 8.3.1: wadah kolom untuk pill kamera + banner bangun — banner selalu
+   tepat di bawah pill (gap 8px), jadi keduanya tak pernah bertumpuk,
+   baik saat panel tertutup (tengah) maupun terbuka (strip kiri).
+   pointer-events: none pada wadah supaya klik di celahnya tembus ke
+   kanvas; anak-anaknya tetap bisa diklik. Tanpa panel, posisi visual
+   sama seperti sebelumnya (pill di y 12, banner di y ~56, dulu 60). */
+.top-overlays {
   position: absolute;
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 5;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.top-overlays .camera-toolbar,
+.top-overlays .build-banner {
+  pointer-events: auto;
+}
+
+.camera-toolbar {
   display: flex;
   gap: 4px;
   background: var(--surface);
@@ -285,15 +304,30 @@ button {
    sebagian tombol bisa terselip di balik panel — secara geometri tak
    bisa dihindari tanpa menutupi panel. */
 @media (min-width: 901px) {
-  .world-wrap.has-panel .camera-toolbar {
+  /* 8.3.1: yang bergeser ke strip kiri kini wadahnya (.top-overlays);
+     pill membungkus di dalamnya, banner mengikuti tepat di bawah pill
+     (putih: normal supaya teksnya membungkus dalam strip, bukan
+     meluber ke balik panel). */
+  .world-wrap.has-panel .top-overlays {
     left: 12px;
     transform: none;
+    align-items: flex-start;
     max-width: calc(100% - min(780px, 94%) - 24px);
+  }
+
+  .world-wrap.has-panel .camera-toolbar {
+    max-width: 100%;
     flex-wrap: wrap;
   }
 
   .world-wrap.has-panel .camera-toolbar button {
     flex-shrink: 0;
+  }
+
+  .world-wrap.has-panel .build-banner {
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
   }
 
   .world-wrap.has-panel .world-hint {
@@ -1149,11 +1183,6 @@ button.primary:disabled {
 
 /* Phase 6 — world builder, acara, analytics. */
 .build-banner {
-  position: absolute;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 6;
   margin: 0;
   padding: 6px 14px;
   font-size: 13px;
@@ -1290,6 +1319,7 @@ button.primary:disabled {
   .detail,
   .hud,
   .camera-toolbar,
+  .top-overlays,
   .world-canvas,
   .world-hint,
   .camera-hint,

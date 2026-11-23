@@ -9,6 +9,13 @@ import type { MeetingRoom } from '../../types/meeting';
 export interface RoomVisuals {
   group: THREE.Group;
   setActive: (roomId: string, active: boolean) => void;
+  /**
+   * 8.3.1: tampilkan/sembunyikan label nama ruangan. Disembunyikan saat
+   * mode Ikuti Agent / Orang Pertama (kamera dekat: label 3,4 unit
+   * menutupi label agent yang diikuti); alas + cincin tetap terlihat,
+   * jadi identifikasi ruangan di Overview tak berubah.
+   */
+  setLabelsVisible: (visible: boolean) => void;
 }
 
 function makeNameSprite(text: string): THREE.Sprite {
@@ -38,6 +45,7 @@ function makeNameSprite(text: string): THREE.Sprite {
 export function buildMeetingRooms(scene: THREE.Scene, rooms: MeetingRoom[]): RoomVisuals {
   const group = new THREE.Group();
   const pads = new Map<string, THREE.MeshStandardMaterial>();
+  const labels: THREE.Sprite[] = [];
 
   rooms.forEach((room) => {
     const color = new THREE.Color(room.color);
@@ -72,6 +80,7 @@ export function buildMeetingRooms(scene: THREE.Scene, rooms: MeetingRoom[]): Roo
 
     const label = makeNameSprite(room.name);
     label.position.set(room.x + 2.9, 2.7, room.z);
+    labels.push(label);
     group.add(label);
   });
 
@@ -82,6 +91,11 @@ export function buildMeetingRooms(scene: THREE.Scene, rooms: MeetingRoom[]): Roo
     setActive(roomId: string, active: boolean): void {
       const mat = pads.get(roomId);
       if (mat) mat.opacity = active ? 0.65 : 0.3;
+    },
+    setLabelsVisible(visible: boolean): void {
+      labels.forEach((label) => {
+        label.visible = visible;
+      });
     },
   };
 }

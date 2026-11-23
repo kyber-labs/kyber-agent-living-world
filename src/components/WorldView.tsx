@@ -23,9 +23,14 @@ interface Props {
   showMinimap: boolean;
   /** 8.1: tampilkan/sembunyikan label nama agent di 3D (pengaturan "Atur"). */
   showLabels: boolean;
+  /**
+   * 8.3.1: tampilkan/sembunyikan label nama ruangan meeting. App
+   * mengisinya false saat mode Ikuti Agent / Orang Pertama (kamera dekat).
+   */
+  showRoomLabels: boolean;
 }
 
-export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, onPerf, worldHandle, onGroundClick, onGroundHover, isBuildMode, showMinimap, showLabels }: Props) {
+export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, onPerf, worldHandle, onGroundClick, onGroundHover, isBuildMode, showMinimap, showLabels, showRoomLabels }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const onSelectRef = useRef(onSelect);
   const onAgentStateRef = useRef(onAgentState);
@@ -77,6 +82,12 @@ export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTi
   useEffect(() => {
     worldHandle.current?.setLabelsVisible(showLabels);
   }, [showLabels, worldHandle]);
+
+  // 8.3.1: label ruangan mengikuti mode kamera — sembunyi saat Ikuti
+  // Agent / Orang Pertama supaya tak menutupi label agent yang diikuti.
+  useEffect(() => {
+    worldHandle.current?.setRoomLabelsVisible(showRoomLabels);
+  }, [showRoomLabels, worldHandle]);
 
   return (
     <div ref={containerRef} className="world-canvas" aria-label="Dunia 3D">
