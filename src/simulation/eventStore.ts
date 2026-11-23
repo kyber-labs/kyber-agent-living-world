@@ -23,6 +23,7 @@ function seedEvents(): CityEvent[] {
       startedAt: '2026-11-22T08:00:00.000Z',
       endedAt: '2026-11-22T08:03:00.000Z',
       durationSeconds: 180,
+      gatheredAt: '2026-11-22T08:00:30.000Z',
     },
   ];
 }
@@ -54,10 +55,27 @@ export class EventStore {
       status: 'active',
       startedAt: nowIso(),
       endedAt: null,
+      // Perbaikan 6.1: belum ada peserta yang tiba saat acara dibuat;
+      // App menandainya lewat markGathered saat semua peserta berkumpul.
+      gatheredAt: null,
     };
     this.events = [...this.events, event];
     this.emit();
     return event;
+  }
+
+  /**
+   * Perbaikan 6.1: tandai semua peserta sudah tiba di slot (hitung mundur
+   * durasi dimulai dari saat ini). Hanya untuk acara aktif yang belum
+   * ditandai; pemanggilan ulang tidak mengubah waktu yang sudah tercatat.
+   */
+  markGathered(id: string): void {
+    const target = this.events.find((e) => e.id === id);
+    if (!target || target.status !== 'active' || target.gatheredAt) return;
+    this.events = this.events.map((e) =>
+      e.id === id ? { ...e, gatheredAt: nowIso() } : e,
+    );
+    this.emit();
   }
 
   endEvent(id: string): void {

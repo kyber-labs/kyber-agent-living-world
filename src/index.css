@@ -504,6 +504,9 @@ button.primary:disabled {
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 4px 18px rgba(30, 41, 59, 0.2);
+  /* Perbaikan 6.1: potong isi ke sudut panel supaya gelembung tidak
+     melukis keluar batas panel saat daftar pesan digulir. */
+  overflow: hidden;
 }
 
 .chat-header {
@@ -562,11 +565,20 @@ button.primary:disabled {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 120px;
+  /* Perbaikan 6.1: min-height 0 supaya area pesan bisa mengecil di dalam
+     panel yang dibatasi max-height 70% — tanpa ini, area pesan menahan
+     tinggi kontennya dan overflow-y tidak bekerja, sehingga balasan
+     panjang terpotong (temuan live 6.0). */
+  min-height: 0;
 }
 
 .chat-msg p {
   margin: 2px 0 0;
+  /* Perbaikan 6.1: kata/token panjang (tautan, deret karakter) dibungkus
+     di dalam gelembung, bukan meluber keluar; jeda baris balasan model
+     dipertahankan supaya balasan panjang tampil utuh. */
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .chat-msg.user {

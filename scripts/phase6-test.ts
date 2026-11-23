@@ -132,7 +132,16 @@ const startMs = new Date(ev.startedAt).getTime();
 check('belum kedaluwarsa sebelum durasi habis', !isEventExpired(ev, startMs + 30_000));
 eventStore.endExpired(startMs + 61_000);
 check(
-  'kedaluwarsa setelah durasi habis -> ended',
+  // Perbaikan 6.1: hitung mundur dimulai saat semua peserta berkumpul
+  // (atau setelah masa tenggang 90 dtk) — bukan saat durasi sejak mulai
+  // habis. Acara 60 dtk yang pesertanya belum berkumpul masih aktif di
+  // +61 dtk.
+  'belum kedaluwarsa saat durasi sejak mulai habis — masih dalam tenggang (6.1)',
+  eventStore.getEvents().find((x) => x.id === ev.id)?.status === 'active',
+);
+eventStore.endExpired(startMs + 151_000);
+check(
+  'kedaluwarsa setelah tenggang + durasi habis -> ended',
   eventStore.getEvents().find((x) => x.id === ev.id)?.status === 'ended',
 );
 const eventStore2 = new EventStore();

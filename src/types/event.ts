@@ -21,6 +21,13 @@ export interface CityEvent {
   endedAt: string | null; // ISO
   /** Durasi dalam detik nyata; acara berakhir otomatis bila lewat. */
   durationSeconds: number;
+  /**
+   * Perbaikan 6.1: saat semua peserta tiba di slot (ISO) atau null bila
+   * masih ada yang dalam perjalanan. Hitung mundur durasi dimulai dari
+   * sini; bila null, berakhirnya dihitung dari startedAt + masa tenggang
+   * (lihat EVENT_ARRIVAL_GRACE_SECONDS di eventLogic).
+   */
+  gatheredAt: string | null;
 }
 
 export interface NewEventInput {

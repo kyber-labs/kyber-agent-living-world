@@ -3,7 +3,7 @@
 // belum (lencana "Simulasi lokal" + penjelasan). Tidak pernah ada balasan
 // yang diklaim sebagai AI bila sebenarnya simulasi.
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AgentEngine } from '../ai/engine';
 import type { Agent, AgentStatus } from '../types/agent';
 import type { Task } from '../types/task';
@@ -30,6 +30,14 @@ export function AgentChat({ agent, liveState, tasks, engine, onClose }: Props) {
 
   const live = engine.mode === 'live';
 
+  // Perbaikan 6.1: gulir ke balasan terbaru SETELAH daftar pesan dirender.
+  // Sebelumnya scrollTo dipanggil langsung setelah setMessages — DOM belum
+  // diperbarui sehingga tingginya masih tinggi lama dan balasan panjang
+  // terpotong di bawah lipatan (temuan live 6.0).
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [messages, sending]);
+
   async function send(): Promise<void> {
     const text = input.trim();
     if (!text || sending) return;
@@ -40,7 +48,6 @@ export function AgentChat({ agent, liveState, tasks, engine, onClose }: Props) {
     const result = await engine.chat(agent, liveState.status, liveState.location, tasks, text, history);
     setMessages((prev) => [...prev, { role: 'agent', text: result.text, live: result.live }]);
     setSending(false);
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }
 
   return (

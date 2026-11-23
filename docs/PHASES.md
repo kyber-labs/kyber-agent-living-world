@@ -222,6 +222,62 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
   migrasi baru bila diputuskan), jadwal acara ke depan, generator PDF
   sesungguhnya, pengaruh vital ke kecepatan/kinerja agent.
 
+## Perbaikan 6.1 — durasi acara, gelembung chat, status lokasi ✅ SELESAI (23 Nov 2026)
+Perbaikan kecil atas temuan verifikasi live Phase 6 (23 Nov 10:39, deploy
+a073ea5). Tiga butir:
+1. **Durasi acara vs kecepatan jalan (cacat nyata, diperbaiki).** Live:
+   acara "Pertunjukan" 3 menit — Kai dan Leo baru mencapai status
+   "Hiburan" sekitar menit ke-2:45, Luna tidak pernah tiba sebelum acara
+   berakhir otomatis. Penyebab: hitung mundur durasi berjalan sejak acara
+   dimulai, sementara peserta berjalan 2,2 unit/dtk dari posisi mana pun
+   di kota. Perbaikan: hitung mundur dimulai saat SEMUA peserta tiba di
+   slot (`CityEvent.gatheredAt`, diisi `EventStore.markGathered` saat App
+   mendeteksi status live semua peserta = status acara), jadi peserta
+   mendapat durasi PENUH untuk beraktivitas. Bila ada peserta yang tak
+   kunjung tiba, hitung mundur tetap dimulai setelah masa tenggang
+   90 detik (`EVENT_ARRIVAL_GRACE_SECONDS`) supaya acara tidak menggantung
+   selamanya — 90 dtk dipilih dari batas atas waktu tempuh: rute BFS
+   terjauh antar simpul ~48 unit (~22 dtk) ditambah sisa perjalanan yang
+   sedang ditempuh saat acara dimulai (~20 dtk), total terburuk ~45 dtk,
+   jadi 90 dtk memberi margin 2× (diuji di `scripts/phase61-test.ts`).
+   Kecepatan jalan global TIDAK diubah. UI panel Acara menampilkan
+   "Menunggu peserta tiba (n/total)" selama berkumpul dan waktu berakhir
+   setelah berkumpul penuh. Acara lama (sebelum 6.1) tanpa `gatheredAt`
+   diperlakukan sebagai belum berkumpul.
+2. **Gelembung chat memotong balasan panjang (cacat nyata, diperbaiki).**
+   Dua penyebab: (a) `AgentChat` memanggil `scrollTo` langsung setelah
+   `setMessages` — DOM belum dirender sehingga tingginya masih tinggi
+   lama dan balasan panjang terpotong di bawah lipatan; kini gulir
+   dilakukan lewat `useEffect` setelah daftar pesan dirender. (b) CSS:
+   `.chat-messages` kini `min-height: 0` supaya area pesan bisa mengecil
+   di dalam panel yang dibatasi `max-height: 70%` dan `overflow-y: auto`
+   benar-benar bekerja; `.chat-msg p` memakai `overflow-wrap: break-word`
+   (token panjang dibungkus di dalam gelembung) + `white-space: pre-wrap`
+   (jeda baris balasan dipertahankan); `.chat-panel` memakai
+   `overflow: hidden` supaya isi terpotong rapi di sudut panel.
+3. **Status lokasi vs peserta (diselidiki — TIDAK ada cacat, tidak diubah).**
+   Live: agent BUKAN peserta menampilkan "Olahraga" saat lewat dekat
+   Arena, "Hiburan" dekat Panggung, "Meeting" di ruang meeting, dan status
+   itu bertahan setelah acara berakhir. Hasil penyelidikan kode: (a)
+   status peserta acara DIBERSIHKAN dengan benar — `setEvent(null)`
+   menyetel `dwellUntil = 0` bila statusnya sports/entertainment sehingga
+   agent bubar pada tick berikut; bila masih berjalan ke slot, kedatangan
+   jatuh ke `arrive()` biasa; penugasan dicabut App saat state acara
+   berubah (termasuk `endExpired` tiap 5 detik). (b) Status non-peserta
+   berasal dari jalur ambient yang MEMANG dirancang: 30% tujuan acak ke
+   Arena/Panggung menjadi olahraga/hiburan 8–14 detik (`behavior.ts`
+   pendingActivity), dan meeting ambient Phase 3 (dua agent diam yang
+   berdekatan menjadi meeting 6–10 detik). Jadi temuan live itu perilaku
+   yang dirancang, BUKAN cacat — didokumentasikan di sini supaya tidak
+   dilaporkan lagi sebagai cacat.
+- Di luar lingkup (tidak disentuh): export CSV dan Cetak/PDF — keduanya
+  tidak terverifikasi di live 6.0 karena keterbatasan alat pemeriksa,
+  tanpa bukti cacat aplikasi; kode CSV tercakup uji logika Phase 6.
+- Verifikasi: `npm run build` lulus (dist `index-BgqxJ4fW.js`, 891,92 kB),
+  dev + preview HTTP 200, uji logika baru `scripts/phase61-test.ts`
+  25/25 lulus, regresi Phase 6 49/49 lulus (satu assertion lama diubah
+  mengikuti semantik baru + satu ditambah), regresi Phase 5 33/33 lulus.
+
 ## Phase 7 — Optimasi, pengujian, dokumentasi
 - LOD, frustum culling, instancing, pengaturan kualitas grafis, monitoring
   FPS/memori, pengujian perangkat + browser + performa + keamanan, laporan

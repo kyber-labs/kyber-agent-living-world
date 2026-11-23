@@ -8,7 +8,7 @@ import { MeetingStore } from './simulation/meetingStore';
 import { EventStore } from './simulation/eventStore';
 import { WorldObjectStore } from './simulation/worldObjectStore';
 import { roomSlotPositions, validateStartMeeting } from './simulation/meetingLogic';
-import { eventSlotPositions, validateStartEvent } from './simulation/eventLogic';
+import { eventSlotPositions, isEventGathered, validateStartEvent } from './simulation/eventLogic';
 import { validatePlacement } from './simulation/builderLogic';
 import { computeAnalytics } from './simulation/analytics';
 import type { EnvironmentState, Vitals } from './simulation/lifeSim';
@@ -176,6 +176,20 @@ function App() {
       if (!inActive.has(a.id)) handle.setEventAssignment(a.id, null);
     });
   }, [events]);
+
+  // Phase 6.1: tandai acara sebagai berkumpul penuh saat semua peserta
+  // sudah tiba di slot (status live = status acara). Hitung mundur durasi
+  // dimulai dari momen ini (lihat eventEndMs); tanpa ini, peserta dari
+  // sudut kota yang jauh kehabisan durasi di perjalanan (temuan live 6.0).
+  useEffect(() => {
+    const store = eventStoreRef.current;
+    if (!store) return;
+    events
+      .filter((e) => e.status === 'active' && !e.gatheredAt)
+      .forEach((e) => {
+        if (isEventGathered(e, liveStates)) store.markGathered(e.id);
+      });
+  }, [events, liveStates]);
 
   // Phase 6: sinkronkan objek builder ke dunia 3D dari state store.
   useEffect(() => {
@@ -487,6 +501,7 @@ function App() {
           {showEvents && (
             <EventsPanel
               events={events}
+              liveStates={liveStates}
               onStart={handleStartEvent}
               onEnd={handleEndEvent}
               onDelete={handleDeleteEvent}

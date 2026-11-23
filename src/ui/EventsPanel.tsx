@@ -8,9 +8,12 @@ import { useState } from 'react';
 import { AGENTS } from '../config/agents';
 import type { CityEvent, EventKind, NewEventInput } from '../types/event';
 import { EVENT_DURATIONS, EVENT_KINDS } from '../types/event';
+import { arrivedParticipantIds, eventEndMs } from '../simulation/eventLogic';
+import type { LiveAgentState } from '../types/agent';
 
 interface Props {
   events: CityEvent[];
+  liveStates: LiveAgentState;
   onStart: (input: NewEventInput) => string | null;
   onEnd: (id: string) => void;
   onDelete: (id: string) => void;
@@ -29,7 +32,7 @@ function formatDuration(seconds: number): string {
   return s === 0 ? `${m} mnt` : `${m} mnt ${s} dtk`;
 }
 
-export function EventsPanel({ events, onStart, onEnd, onDelete, onClose }: Props) {
+export function EventsPanel({ events, liveStates, onStart, onEnd, onDelete, onClose }: Props) {
   const [formKind, setFormKind] = useState<EventKind | null>(null);
   const [title, setTitle] = useState('');
   const [checked, setChecked] = useState<string[]>([]);
@@ -77,6 +80,8 @@ export function EventsPanel({ events, onStart, onEnd, onDelete, onClose }: Props
       </div>
       <p className="muted">
         Acara simulasi — peserta berjalan ke lokasi dan berkumpul selama durasi acara, lalu bubar.
+        Hitung mundur durasi dimulai saat semua peserta tiba (bila ada yang belum tiba setelah
+        90 detik, hitung mundur tetap berjalan supaya acara tidak menggantung).
       </p>
 
       <h3 className="section-title">Mulai acara</h3>
@@ -174,12 +179,19 @@ export function EventsPanel({ events, onStart, onEnd, onDelete, onClose }: Props
           {active.map((e) => {
             const def = EVENT_KINDS[e.kind];
             const participants = e.participantIds.map((id) => AGENTS.find((a) => a.id === id)?.name ?? id);
+            const arrived = arrivedParticipantIds(e, liveStates).length;
+            const endAt = new Date(eventEndMs(e));
             return (
               <article key={e.id} className="meeting-card" style={{ borderTopColor: def.color }}>
                 <div className="task-title">{e.title}</div>
                 <p className="task-desc">
                   {def.label} · {def.locationName} · {participants.join(', ')} · mulai {formatTime(e.startedAt)} ·
                   durasi {formatDuration(e.durationSeconds)}
+                </p>
+                <p className="task-desc">
+                  {e.gatheredAt
+                    ? `Semua peserta berkumpul · berakhir ${formatTime(endAt.toISOString())}`
+                    : `Menunggu peserta tiba (${arrived}/${e.participantIds.length}) — durasi penuh dimulai saat semua berkumpul`}
                 </p>
                 <div className="task-actions">
                   <button type="button" onClick={() => onEnd(e.id)}>
