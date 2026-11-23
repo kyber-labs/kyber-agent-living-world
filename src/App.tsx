@@ -27,7 +27,7 @@ import type { Meeting, NewMeetingInput } from './types/meeting';
 import { EVENT_KINDS } from './types/event';
 import type { CityEvent, NewEventInput } from './types/event';
 import type { WorldObject, WorldObjectKind } from './types/worldObject';
-import type { WorldHandle } from './world/engine/createWorld';
+import type { WorldHandle, PerfStats } from './world/engine/createWorld';
 import type { CameraMode } from './world/camera/CameraDirector';
 import type { AgentStatus, LiveAgentState } from './types/agent';
 import type { NewTaskInput, Task, TaskStatus } from './types/task';
@@ -56,6 +56,8 @@ function App() {
   const [showMeetings, setShowMeetings] = useState(false);
   const [vitals, setVitals] = useState<Record<string, Vitals>>({});
   const [env, setEnv] = useState<EnvironmentState | null>(null);
+  // Phase 7: statistik performa nyata (FPS + draw call), diperbarui 1x/detik.
+  const [perf, setPerf] = useState<PerfStats | null>(null);
   // Phase 6: acara olahraga/hiburan, world builder, analytics.
   const [events, setEvents] = useState<CityEvent[]>([]);
   const [objects, setObjects] = useState<WorldObject[]>([]);
@@ -252,6 +254,10 @@ function App() {
     setEnv(nextEnv);
   }
 
+  function handlePerf(stats: PerfStats): void {
+    setPerf(stats);
+  }
+
   function handleModeChange(mode: CameraMode): void {
     if (mode === 'follow' && !selectedId) {
       setSelectedId('aria');
@@ -381,7 +387,7 @@ function App() {
       <header className="app-header">
         <div className="header-title">
           <h1>AI Agent Living World</h1>
-          <span className="phase-badge">Phase 6 — Olahraga &amp; Builder &amp; Analitik</span>
+          <span className="phase-badge">Phase 7 — Optimasi &amp; Dokumentasi</span>
         </div>
         <div className="header-actions">
           <button
@@ -461,6 +467,7 @@ function App() {
             onSelect={setSelectedId}
             onAgentState={handleAgentState}
             onLifeTick={handleLifeTick}
+            onPerf={handlePerf}
             worldHandle={worldHandle}
             onGroundClick={handleGroundClick}
             isBuildMode={() => buildMode !== null}
@@ -549,7 +556,7 @@ function App() {
           onChat={selected ? () => setChatAgentId(selected.id) : undefined}
         />
       </main>
-      <Hud agents={AGENTS} liveStates={liveStates} dbConfigured={dbConfigured} engineMode={engine.mode} tasks={tasks} env={env} />
+      <Hud agents={AGENTS} liveStates={liveStates} dbConfigured={dbConfigured} engineMode={engine.mode} tasks={tasks} env={env} perf={perf} />
     </div>
   );
 }

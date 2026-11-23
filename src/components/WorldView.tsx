@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { createWorld, type WorldHandle } from '../world/engine/createWorld';
+import { createWorld, type PerfStats, type WorldHandle } from '../world/engine/createWorld';
 import { Minimap } from './Minimap';
 import type { Agent, AgentStatus } from '../types/agent';
 import type { EnvironmentState, Vitals } from '../simulation/lifeSim';
@@ -10,6 +10,8 @@ interface Props {
   onSelect: (id: string | null) => void;
   onAgentState: (id: string, status: AgentStatus, location: string) => void;
   onLifeTick: (vitals: Record<string, Vitals>, env: EnvironmentState) => void;
+  /** Dipanggil maksimal 1x/detik dengan FPS nyata + draw call (Phase 7). */
+  onPerf: (stats: PerfStats) => void;
   worldHandle: { current: WorldHandle | null };
   /** Dipanggil saat mode bangun aktif dan pengguna mengklik tanah. */
   onGroundClick: (x: number, z: number) => void;
@@ -17,11 +19,12 @@ interface Props {
   isBuildMode: () => boolean;
 }
 
-export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, worldHandle, onGroundClick, isBuildMode }: Props) {
+export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, onPerf, worldHandle, onGroundClick, isBuildMode }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const onSelectRef = useRef(onSelect);
   const onAgentStateRef = useRef(onAgentState);
   const onLifeTickRef = useRef(onLifeTick);
+  const onPerfRef = useRef(onPerf);
   const onGroundClickRef = useRef(onGroundClick);
   const isBuildModeRef = useRef(isBuildMode);
 
@@ -29,6 +32,7 @@ export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTi
     onSelectRef.current = onSelect;
     onAgentStateRef.current = onAgentState;
     onLifeTickRef.current = onLifeTick;
+    onPerfRef.current = onPerf;
     onGroundClickRef.current = onGroundClick;
     isBuildModeRef.current = isBuildMode;
   });
@@ -41,6 +45,7 @@ export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTi
       onSelectAgent: (id) => onSelectRef.current(id),
       onAgentState: (id, status, location) => onAgentStateRef.current(id, status, location),
       onLifeTick: (vitals, env) => onLifeTickRef.current(vitals, env),
+      onPerf: (stats) => onPerfRef.current(stats),
       onGroundClick: (x, z) => onGroundClickRef.current(x, z),
       isBuildMode: () => isBuildModeRef.current(),
     });

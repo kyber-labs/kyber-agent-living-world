@@ -21,6 +21,7 @@ import type { EventAssignment } from '../../types/event';
 import type { WorldObject } from '../../types/worldObject';
 import { buildWorldObject } from '../buildings/props';
 import { createWorldClock } from '../../simulation/clock';
+import { FpsTracker } from '../../simulation/fps';
 import { LifeSim, type EnvironmentState, type Vitals, type WeatherKind, type DayPeriod } from '../../simulation/lifeSim';
 import { AgentBehavior } from '../../simulation/behavior';
 import { buildCity, type CityInfo } from '../buildings/city';
@@ -62,10 +63,18 @@ export interface WorldOptions {
   onSelectAgent: (id: string | null) => void;
   onAgentState?: (id: string, status: AgentStatus, location: string) => void;
   onLifeTick?: (vitals: Record<string, Vitals>, env: EnvironmentState) => void;
+  /** Dipanggil maksimal 1x/detik dengan FPS nyata + jumlah draw call frame terakhir. */
+  onPerf?: (stats: PerfStats) => void;
   /** Dipanggil saat mode bangun aktif dan pengguna mengklik tanah. */
   onGroundClick?: (x: number, z: number) => void;
   /** True saat mode bangun (penempatan/pindah objek) sedang aktif. */
   isBuildMode?: () => boolean;
+}
+
+/** Statistik performa nyata dari renderer (FPS + draw call), untuk HUD. */
+export interface PerfStats {
+  fps: number;
+  drawCalls: number;
 }
 
 const CAMERA_HOME = new THREE.Vector3(0, 40, 75);
@@ -136,6 +145,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.domElement.classList.add('world-gl');
+  // Phase 7: pixel ratio dibatasi maks 2 — layar rapat (3x) tidak memaksa
+  // renderer bekerja 3x lipat. Sudah ada sejak Phase 1, diverifikasi
+  // tetap berlaku (tidak ada tempat lain yang mengubah pixel ratio).
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
@@ -390,8 +402,13 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   resizeObserver.observe(container);
 
   let lastNow = performance.now();
+  // Phase 7: pelacak FPS nyata (dari delta requestAnimationFrame) +
+  // waktu emisi terakhir ke React (maksimal 1x/detik).
+  const fpsTracker = new FpsTracker();
+  let lastPerfEmit = 0;
   renderer.setAnimationLoop(() => {
     const now = performance.now();
+    fpsTracker.push(now);
     const dt = Math.min((now - lastNow) / 1000, 0.05);
     lastNow = now;
     const t = clock.elapsed();
@@ -431,6 +448,12 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     }
     director.update(dt);
     renderer.render(scene, camera);
+    // Phase 7: FPS nyata + draw call frame ini, dilaporkan ke React
+    // maksimal 1x/detik supaya HUD tidak me-render ulang tiap frame.
+    if (now - lastPerfEmit >= 1000) {
+      lastPerfEmit = now;
+      options.onPerf?.({ fps: fpsTracker.getFps(), drawCalls: renderer.info.render.calls });
+    }
   });
 
   function dispose(): void {

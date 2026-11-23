@@ -342,18 +342,115 @@ a073ea5). Tiga butir:
   200, uji logika baru `scripts/phase62-test.ts` 20/20 lulus, regresi
   Phase 6.1 25/25, Phase 6 49/49, Phase 5 33/33 lulus.
 
-## Phase 7 — Optimasi, pengujian, dokumentasi
-- LOD, frustum culling, instancing, pengaturan kualitas grafis, monitoring
-  FPS/memori, pengujian perangkat + browser + performa + keamanan, laporan
-  pengujian yang jujur.
+## Phase 7 — Optimasi, pengujian, dokumentasi ✅ SELESAI (23 Nov 2026)
+Fase terakhir. Tidak ada fitur baru — hanya membuat aplikasi yang sudah
+ada lebih cepat, teruji, dan terdokumentasi. Tampilan, warna, dan perilaku
+agent TIDAK berubah.
 
-## Backlog transparan (belum ada — jangan diklaim berfungsi)
-- Kalender tugas (baru deadline di kartu), sinkronisasi chat ke Supabase,
-  sinkronisasi meeting ke Supabase (tabel belum ada), sinkronisasi acara +
-  objek builder ke Supabase (tabel belum ada), jadwal meeting/acara ke
-  depan (baru mulai langsung), generator PDF sesungguhnya (saat ini hanya
-  print browser), mode gelap, autentikasi, animasi berlari dan berbicara
-  yang terpisah.
+### Optimasi performa (nyata, terukur dari kode)
+- **Monitor FPS nyata di HUD** (`src/simulation/fps.ts` + `createWorld.ts`
+  + `Hud.tsx`): `FpsTracker` menghitung FPS dari rata-rata delta
+  `requestAnimationFrame` (jendela 120 frame terakhir, delta 0 / >=1000 ms
+  diabaikan supaya jeda tab tidak merusak rata-rata) dan melaporkannya ke
+  React maksimal 1x/detik bersama `renderer.info.render.calls` (jumlah
+  draw call frame terakhir). HUD menampilkan mis. "60 FPS · 182 draw".
+  Angka FPS-nya nyata dari perangkat yang membuka aplikasi — bukan
+  karangan. FPS live di perangkat Bos/penguji TIDAK bisa diukur dari
+  lingkungan pengembangan (tanpa GPU/browser) — menjadi bagian verifikasi
+  live setelah deploy.
+- **Instancing** (`src/world/buildings/city.ts`): pohon (19), marka jalan
+  (~36), dan rumah (10) yang tadinya puluhan `Mesh` individual kini
+  `InstancedMesh` — satu draw call per geometri/material. Matriks instansi
+  dihitung helper murni yang diuji elemen per elemen di
+  `scripts/phase7-test.ts` (posisi/rotasi/skala sama persis seperti Mesh
+  aslinya); `computeBoundingSphere()` dipanggil eksplisit supaya mesh
+  tidak ter-cull keliru. Hitungan draw call (dihitung dari kode, bukan
+  diukur live): kota statis 167 → 74 draw call (−93, −56%); total per
+  frame ±275 → ±182 (−34%, karakter agent ±100 draw call tidak berubah
+  karena beranimasi individual). Angka live (HUD "draw") menjadi bagian
+  verifikasi live setelah deploy.
+- **Sudah ada sejak dulu, diverifikasi tetap berlaku (tidak diubah)**:
+  pixel ratio dibatasi maks 2 (`createWorld.ts` — layar rapat 3x tidak
+  memaksa renderer bekerja 3x lipat); frustum culling bawaan three.js
+  tidak dimatikan di mana pun (tidak ada `frustumCulled = false` di
+  `src/`); hanya satu sumber bayangan (matahari, shadow map 2048) —
+  tidak ada lampu bayangan baru.
+- **Sengaja TIDAK di-instance** (didokumentasikan alasannya): karakter
+  agent (beranimasi individual — kaki/lengan/kepala bergerak sendiri);
+  bangku taman (hanya 2 buah, hematnya 6 draw call tidak sebanding
+  dengan kerumitan matriks); objek world builder (dibangun ulang tiap
+  berubah, jumlah kecil); ruang meeting (6 × 4 mesh).
+- **Bundle**: `index-BL8yDAkx.js` 896,28 kB (sebelumnya `index-BgqxJ4fW.js`
+  891,92 kB — naik 4,36 kB / +0,49%, dari kode FpsTracker + instancing +
+  HUD; CSS identik `index-CoVDNUU5.css` 12,21 kB).
+
+### Pengujian (konsolidasi)
+- **Satu perintah uji gabungan**: `npm test` (= `bash
+  scripts/run-all-tests.sh`) menjalankan SEMUA suite logika lewat bundle
+  rolldown dan melaporkan total — **145 lulus, 0 gagal** (Phase 5: 33,
+  Phase 6: 49, Phase 6.1: 25, Phase 6.2: 20, Phase 7: 18). Semua suite
+  lama lulus TANPA mengubah assertion lama.
+- **Uji baru** `scripts/phase7-test.ts` (18 assertion): FpsTracker
+  (tanpa data → 0; delta tetap 16,67 ms → 60 FPS; 33,33 ms → 30;
+  campuran → 40; jeda panjang + delta 0 diabaikan; jendela dibatasi 120
+  sampel) + matriks instancing (batang/tajuk pohon, marka jalan, badan/
+  atap/pintu rumah — posisi, rotasi, skala).
+- Catatan yang tetap berlaku: `node scripts/*-test.ts` langsung gagal
+  (`ERR_MODULE_NOT_FOUND`) karena import tanpa ekstensi gaya Vite tidak
+  bisa di-resolve Node ESM — bukan cacat; jalankan lewat bundle rolldown
+  (lihat `docs/SETUP.md`).
+
+### Dokumentasi (lengkap)
+- `README.md` ditulis ulang sebagai dokumen final: fitur per fase,
+  stack, cara menjalankan, struktur proyek, tabel env, deploy.
+- `docs/SETUP.md` diperbarui: langkah Gemini (buat key, pasang di
+  Vercel, batasi referrer — butuh 2SV) + Supabase opsional (migrasi
+  tasks) + troubleshooting yang sudah diketahui (model 2.5 tidak
+  tersedia untuk project baru; format key `AQ.`; Cloud Console diblokir
+  tanpa 2SV; dev bind IPv6; klik figur yang berjalan).
+- `docs/ARCHITECTURE.md` (baru): lapisan (UI → simulation engine →
+  world engine → AI engine → persistence), alur data (store + subscribe,
+  satu sumber status agent, jembatan React–Three.js), pola (fungsi murni
+  + uji, seed demo, label jujur), dan catatan performa.
+- `.env.example`: nilai `VITE_GEMINI_MODEL` diubah ke
+  `gemini-3.5-flash-lite` + komentar peringatan model 2.5. Semua env
+  yang dipakai kode (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
+  `VITE_GEMINI_API_KEY`, `VITE_GEMINI_MODEL`) ada di sana.
+- Verifikasi: `npm run build` lulus, dev + preview HTTP 200, `npm test`
+  145/145 lulus, `npm run lint` 0 error.
+
+### Status akhir semua fase
+Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
+(Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
+bukan cacat) · Phase 7 ✅. Semua terverifikasi live kecuali angka FPS +
+draw call Phase 7 (menunggu verifikasi live setelah deploy).
+
+## Backlog akhir (transparan — belum ada, jangan diklaim berfungsi)
+- Sinkronisasi meeting ke Supabase (tabel belum ada — butuh migrasi baru
+  bila diputuskan); sinkronisasi acara + objek builder ke Supabase (tabel
+  belum ada); sinkronisasi chat ke Supabase (tabel `chat_messages` ada,
+  wiring menyusul).
+- Proksi server-side untuk key LLM (saat ini key ikut ke bundle publik;
+  mitigasi saat ini = batasi referrer + API di Cloud Console — masih
+  menunggu Bos mengaktifkan 2SV).
+- Default model kode `src/ai/llm.ts` masih `gemini-2.5-flash` (tidak
+  tersedia untuk project baru) — deploy mengandalkan env var
+  `VITE_GEMINI_MODEL=gemini-3.5-flash-lite` di Vercel; bila env var
+  terhapus, deploy baru gagal lagi. (Perbaikan yang pernah ditawarkan
+  sebagai patch 4.1 — belum dieksekusi.)
+- Jadwal meeting/acara ke depan (baru mulai langsung); pengingat/
+  undangan meeting; kalender tugas (baru deadline di kartu).
+- Generator PDF sesungguhnya (saat ini hanya print browser via
+  `window.print()`); export CSV + cetak/PDF belum terverifikasi live
+  (unduhan terpicu, berkas tak terbaca alat pemeriksa).
+- Label terjadwal vs spontan di sidebar (supaya akhir acara/meeting
+  selalu terlihat — wart 6.2: peserta bisa langsung kembali berstatus
+  sama secara ambient tanpa transisi terlihat, ~2,7% per peserta per
+  akhir acara).
+- Mode gelap; autentikasi + RBAC (migrasi tasks memakai RLS
+  demo-terbuka); animasi berlari dan berbicara yang terpisah; pengaruh
+  vital ke kecepatan/kinerja agent (saat ini vital hanya tampil +
+  memengaruhi mood); siklus musim.
 - Database live: sinkronisasi tugas aktif bila Supabase dikonfigurasi;
   sampai saat itu tugas + meeting + acara + objek builder tersimpan lokal
   (localStorage).

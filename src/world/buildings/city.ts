@@ -2,6 +2,9 @@
 // Phase 2: gedung kantor pusat (6 lantai), arena olahraga, area hiburan,
 // residensial (10 rumah), taman, jalan, dan alam. Semua geometri nyata
 // (bukan placeholder): bangunan punya dinding, jendela, atap, dan bayangan.
+// Phase 7: pohon, marka jalan, dan rumah digambar sebagai InstancedMesh
+// (bukan puluhan Mesh individual) — tampilan identik, draw call jauh
+// lebih sedikit; bangku taman (hanya 2) tetap Mesh biasa.
 //
 // Tata letak (tanah radius 45, plaza pusat radius 7):
 //   utara (z -22)  : gedung kantor pusat
@@ -108,49 +111,68 @@ function makeScreenTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function makeTree(x: number, z: number, scale = 1): THREE.Group {
-  const tree = new THREE.Group();
-  tree.position.set(x, 0, z);
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.12 * scale, 0.16 * scale, 0.9 * scale, 8),
-    new THREE.MeshStandardMaterial({ color: 0x8a5a3b, roughness: 1 }),
-  );
-  trunk.position.y = 0.45 * scale;
-  trunk.castShadow = true;
-  tree.add(trunk);
-  const foliage = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.9 * scale, 0),
-    new THREE.MeshStandardMaterial({ color: 0x4d7c4d, roughness: 1, flatShading: true }),
-  );
-  foliage.position.y = 1.5 * scale;
-  foliage.castShadow = true;
-  tree.add(foliage);
-  return tree;
+function composeMatrix(
+  x: number,
+  y: number,
+  z: number,
+  rotX: number,
+  rotY: number,
+  rotZ: number,
+  sx: number,
+  sy: number,
+  sz: number,
+): THREE.Matrix4 {
+  const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotX, rotY, rotZ));
+  return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(sx, sy, sz));
 }
 
-function makeHouse(x: number, z: number, color: number, index: number): THREE.Group {
-  const house = new THREE.Group();
-  house.position.set(x, 0, z);
-  const body = box(4, 2.6, 3.5, color, 0, 1.3, 0);
-  house.add(body);
-  const roof = new THREE.Mesh(
-    new THREE.ConeGeometry(3.1, 1.7, 4),
-    new THREE.MeshStandardMaterial({ color: 0x8a4a3b, roughness: 0.9, flatShading: true }),
-  );
-  roof.rotation.y = Math.PI / 4;
-  roof.scale.set(1, 1, 0.85);
-  roof.position.y = 3.45;
-  roof.castShadow = true;
-  house.add(roof);
-  const door = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.9, 1.6),
-    new THREE.MeshStandardMaterial({ color: 0x3b2f2f, roughness: 1 }),
-  );
-  door.position.set(0, 0.8, -1.78);
-  door.rotation.y = Math.PI;
-  house.add(door);
-  house.userData.houseIndex = index;
-  return house;
+/** Batang pohon: silinder tinggi 0,9 — posisi y 0,45 × skala. */
+export function treeTrunkMatrix(x: number, z: number, scale: number): THREE.Matrix4 {
+  return composeMatrix(x, 0.45 * scale, z, 0, 0, 0, scale, scale, scale);
+}
+
+/** Tajuk pohon: icosahedron r 0,9 — posisi y 1,5 × skala. */
+export function treeFoliageMatrix(x: number, z: number, scale: number): THREE.Matrix4 {
+  return composeMatrix(x, 1.5 * scale, z, 0, 0, 0, scale, scale, scale);
+}
+
+/** Marka jalan: bidang yang direbahkan (rotX −90°), y 0,02. */
+export function dashMatrix(x: number, z: number): THREE.Matrix4 {
+  return composeMatrix(x, 0.02, z, -Math.PI / 2, 0, 0, 1, 1, 1);
+}
+
+/** Badan rumah: kotak 4×2,6×3,5, posisi y 1,3. */
+export function houseBodyMatrix(x: number, z: number): THREE.Matrix4 {
+  return composeMatrix(x, 1.3, z, 0, 0, 0, 1, 1, 1);
+}
+
+/** Atap rumah: kerucut 4-segmen, diputar 45°, dipipihkan (1, 1, 0,85), y 3,45. */
+export function houseRoofMatrix(x: number, z: number): THREE.Matrix4 {
+  return composeMatrix(x, 3.45, z, 0, Math.PI / 4, 0, 1, 1, 0.85);
+}
+
+/** Pintu rumah: bidang di sisi utara (z −1,78, menghadap plaza), rotY π, y 0,8. */
+export function houseDoorMatrix(x: number, z: number): THREE.Matrix4 {
+  return composeMatrix(x, 0.8, z - 1.78, 0, Math.PI, 0, 1, 1, 1);
+}
+
+/** Isi satu InstancedMesh dari daftar matriks + hitung bounding sphere
+ *  (three tidak menghitungnya otomatis dari instansi — tanpa ini seluruh
+ *  mesh bisa ter-cull saat kamera menjauh dari titik asal). */
+function buildInstanced(
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  matrices: THREE.Matrix4[],
+  castShadow: boolean,
+  receiveShadow: boolean,
+): THREE.InstancedMesh {
+  const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
+  matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.computeBoundingSphere();
+  mesh.castShadow = castShadow;
+  mesh.receiveShadow = receiveShadow;
+  return mesh;
 }
 
 function makeBench(x: number, z: number, rotY: number): THREE.Group {
@@ -172,6 +194,9 @@ export function buildCity(scene: THREE.Scene): { group: THREE.Group; info: CityI
     { x: 0, z: 0, w: 84, d: 6 },
   ];
   const trees: { x: number; z: number }[] = [];
+  // Phase 7: daftar pohon + skala dikumpulkan dulu, digambar belakangan
+  // sebagai 2 InstancedMesh (batang + tajuk) — lihat di bawah.
+  const treeSpots: { x: number; z: number; scale: number }[] = [];
 
   // Jalan utama (salib) + marka garis putus-putus.
   const roadMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 1 });
@@ -182,21 +207,32 @@ export function buildCity(scene: THREE.Scene): { group: THREE.Group; info: CityI
     road.receiveShadow = true;
     group.add(road);
   });
+  // Phase 7: marka jalan sebagai 2 InstancedMesh (dulu ~36 Mesh) — satu
+  // draw call per arah, posisi/matrik sama persis seperti sebelumnya.
   const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  for (let z = -40; z <= 40; z += 4) {
-    if (Math.abs(z) < 8) continue; // lewati plaza
-    const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 1.6), dashMat);
-    dash.rotation.x = -Math.PI / 2;
-    dash.position.set(0, 0.02, z);
-    group.add(dash);
+  const dashCoords: number[] = [];
+  for (let c = -40; c <= 40; c += 4) {
+    if (Math.abs(c) < 8) continue; // lewati plaza
+    dashCoords.push(c);
   }
-  for (let x = -40; x <= 40; x += 4) {
-    if (Math.abs(x) < 8) continue;
-    const dash = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.3), dashMat);
-    dash.rotation.x = -Math.PI / 2;
-    dash.position.set(x, 0.02, 0);
-    group.add(dash);
-  }
+  group.add(
+    buildInstanced(
+      new THREE.PlaneGeometry(0.3, 1.6),
+      dashMat,
+      dashCoords.map((z) => dashMatrix(0, z)),
+      false,
+      false,
+    ),
+  );
+  group.add(
+    buildInstanced(
+      new THREE.PlaneGeometry(1.6, 0.3),
+      dashMat,
+      dashCoords.map((x) => dashMatrix(x, 0)),
+      false,
+      false,
+    ),
+  );
 
   // Gedung kantor pusat — 6 lantai (18 unit) + atap.
   const office = new THREE.Group();
@@ -297,16 +333,53 @@ export function buildCity(scene: THREE.Scene): { group: THREE.Group; info: CityI
   buildings.push({ id: 'stage', name: 'Panggung Hiburan', kind: 'entertainment', x: -25, z: -12, w: 12, d: 8, color: '#6b5b8f' });
 
   // Residensial — 10 rumah, dua baris.
+  // Phase 7: badan/atap/pintu sebagai InstancedMesh (dulu 30 Mesh → 7):
+  // badan dikelompokkan per warna (5 warna × 2 rumah), atap + pintu
+  // masing-masing satu InstancedMesh 10 instansi. Posisi/rotasi/skala
+  // sama persis seperti makeHouse sebelumnya (userData houseIndex tidak
+  // dibaca di mana pun, jadi tidak dipertahankan).
   const houseColors = [0xe07856, 0xf2c14e, 0x7fb069, 0x6a8caf, 0xc08497];
   const houseXs = [-20, -10, 0, 10, 20];
+  const houseSpots: { x: number; z: number; color: number }[] = [];
   houseXs.forEach((x, i) => {
-    group.add(makeHouse(x, 18, houseColors[i % houseColors.length], i));
+    houseSpots.push({ x, z: 18, color: houseColors[i % houseColors.length] });
     buildings.push({ id: `house-${i + 1}`, name: `Rumah ${i + 1}`, kind: 'house', x, z: 18, w: 4.5, d: 4, color: '#e07856' });
   });
   houseXs.forEach((x, i) => {
-    group.add(makeHouse(x, 27, houseColors[(i + 2) % houseColors.length], i + 5));
+    houseSpots.push({ x, z: 27, color: houseColors[(i + 2) % houseColors.length] });
     buildings.push({ id: `house-${i + 6}`, name: `Rumah ${i + 6}`, kind: 'house', x, z: 27, w: 4.5, d: 4, color: '#7fb069' });
   });
+  houseColors.forEach((color) => {
+    const spots = houseSpots.filter((s) => s.color === color);
+    if (spots.length === 0) return;
+    group.add(
+      buildInstanced(
+        new THREE.BoxGeometry(4, 2.6, 3.5),
+        new THREE.MeshStandardMaterial({ color, roughness: 0.85 }),
+        spots.map((s) => houseBodyMatrix(s.x, s.z)),
+        true,
+        true,
+      ),
+    );
+  });
+  group.add(
+    buildInstanced(
+      new THREE.ConeGeometry(3.1, 1.7, 4),
+      new THREE.MeshStandardMaterial({ color: 0x8a4a3b, roughness: 0.9, flatShading: true }),
+      houseSpots.map((s) => houseRoofMatrix(s.x, s.z)),
+      true,
+      false,
+    ),
+  );
+  group.add(
+    buildInstanced(
+      new THREE.PlaneGeometry(0.9, 1.6),
+      new THREE.MeshStandardMaterial({ color: 0x3b2f2f, roughness: 1 }),
+      houseSpots.map((s) => houseDoorMatrix(s.x, s.z)),
+      false,
+      false,
+    ),
+  );
 
   // Taman — pepohonan + bangku.
   const parkTrees: [number, number][] = [
@@ -317,7 +390,7 @@ export function buildCity(scene: THREE.Scene): { group: THREE.Group; info: CityI
     [-22, 8],
   ];
   parkTrees.forEach(([x, z]) => {
-    group.add(makeTree(x, z, 1.15));
+    treeSpots.push({ x, z, scale: 1.15 });
     trees.push({ x, z });
   });
   group.add(makeBench(-24, 13, 0.4));
@@ -342,9 +415,31 @@ export function buildCity(scene: THREE.Scene): { group: THREE.Group; info: CityI
     [-30, 30],
   ];
   rimTrees.forEach(([x, z]) => {
-    group.add(makeTree(x, z, 0.9 + ((x + z) % 3) * 0.15));
+    treeSpots.push({ x, z, scale: 0.9 + ((x + z) % 3) * 0.15 });
     trees.push({ x, z });
   });
+
+  // Phase 7: pepohonan sebagai 2 InstancedMesh (batang + tajuk, dulu
+  // 19 pohon × 2 Mesh = 38 draw call) — satu draw call per bagian,
+  // skala/posisi sama persis seperti makeTree sebelumnya.
+  group.add(
+    buildInstanced(
+      new THREE.CylinderGeometry(0.12, 0.16, 0.9, 8),
+      new THREE.MeshStandardMaterial({ color: 0x8a5a3b, roughness: 1 }),
+      treeSpots.map((t) => treeTrunkMatrix(t.x, t.z, t.scale)),
+      true,
+      true,
+    ),
+  );
+  group.add(
+    buildInstanced(
+      new THREE.IcosahedronGeometry(0.9, 0),
+      new THREE.MeshStandardMaterial({ color: 0x4d7c4d, roughness: 1, flatShading: true }),
+      treeSpots.map((t) => treeFoliageMatrix(t.x, t.z, t.scale)),
+      true,
+      true,
+    ),
+  );
 
   // Bebatuan.
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x9aa5b1, roughness: 1, flatShading: true });
