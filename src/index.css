@@ -269,17 +269,27 @@ button {
    lebar min(780px, 94%), z-index 8) menutupi sisi kanan .world-wrap —
    pill kamera (tengah, z-index 5) dan bilah petunjuk (lebar penuh)
    tertutup sebagian. Saat panel terbuka, pill digeser ke kiri dalam
-   strip dunia yang masih terlihat (bisa digulir horizontal bila
-   strip lebih sempit dari pill) dan bilah petunjuk diberi padding
+   strip dunia yang masih terlihat dan bilah petunjuk diberi padding
    kanan selebar panel supaya teksnya tetap terbaca penuh. Hanya
    untuk layar lebar (>900px); pada layar sempit tata letak kolom
-   tetap seperti sekarang. */
+   tetap seperti sekarang.
+   Perbaikan 8.2.1: aturan 8.1.1 memberi pill `overflow-x: auto`
+   bila strip lebih sempit dari pill (~460-500px) — strip di viewport
+   1280px hanya ~404px, jadi pill tetap bergulir horizontal dan tombol
+   "Ikuti Agent" terpotong (temuan live 8.2; panel Builder memakai
+   .board-overlay yang sama, jadi bukan khusus Builder). Kini pill
+   membungkus (`flex-wrap: wrap`) ke 2 baris dalam strip, tanpa
+   scrollbar, jadi kelima tombol selalu terlihat penuh. Batas jujur:
+   strip = viewport − 876px; di bawah ~1000px viewport strip lebih
+   sempit dari tombol terlebar ("Orang Pertama", ~125px) sehingga
+   sebagian tombol bisa terselip di balik panel — secara geometri tak
+   bisa dihindari tanpa menutupi panel. */
 @media (min-width: 901px) {
   .world-wrap.has-panel .camera-toolbar {
     left: 12px;
     transform: none;
     max-width: calc(100% - min(780px, 94%) - 24px);
-    overflow-x: auto;
+    flex-wrap: wrap;
   }
 
   .world-wrap.has-panel .camera-toolbar button {

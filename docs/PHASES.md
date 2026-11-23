@@ -777,6 +777,58 @@ agent TIDAK berubah.
     216 lulus, 0 gagal (33+49+25+20+18+16+24+31), lint 0 error
     (5 warning pola lama).
 
+### 8.2.1 — Perbaikan tampilan (teks fase 8.2 + pill kamera tertutup panel Builder)
+
+- Temuan live 8.2 (23 Nov 18:12): (1) teks fase MASIH 8.1 — badge
+  header "Phase 8.1 — Layout & Feed" dan footer HUD "Fase 8.1/7 —
+  Layout & Feed", padahal isi dunia sudah 8.2 (subagent 8.2 tidak
+  menyentuh teks badge/HUD); (2) panel World Builder menutupi
+  sebagian pill mode kamera — pill "Ikuti Agent" terpotong dan
+  muncul scrollbar horizontal.
+- Diagnosis pill (dibaca langsung dari kode, bukan ditebak):
+  BuilderPanel memakai `.board-overlay` yang SAMA dengan semua panel
+  lain (lebar `min(780px, 94%)`, z-index 8) dan `has-panel` di App.tsx
+  SUDAH diterapkan saat section 'builder' — jadi ini BUKAN khusus
+  Builder dan BUKAN kelas overlay yang salah. Penyebab sebenarnya:
+  aturan 8.1.1 menggeser pill ke strip kiri dengan
+  `max-width: calc(100% − min(780px, 94%) − 24px)` + `overflow-x:
+  auto`. Lebar pill ~460–500px (5 tombol), sedangkan strip =
+  viewport − 876px (rel nav 72px + panel 780px + margin 24px).
+  Di viewport 1280px strip hanya ~404px < pill, jadi pill tetap
+  bergulir horizontal dan tombol "Ikuti Agent" terpotong — persis
+  seperti yang terlihat live. Verifikasi live 8.1.1 lulus karena
+  jendela pemeriksa saat itu lebih lebar (≥ ~1350px, strip ≥ pill).
+  Dengan kata lain: 8.1.1 bekerja hanya bila strip lebih lebar dari
+  pill; di bawah itu ia merosot jadi pill yang bisa digulir.
+- Perbaikan: pill kini membungkus (`flex-wrap: wrap`) ke 2 baris
+  dalam strip, `overflow-x: auto` dihapus — kelima tombol terlihat
+  penuh tanpa scrollbar. Aturan `.has-panel` yang sama berlaku untuk
+  SEMUA panel overlay, jadi panel Tugas/Rapat/Acara/Analitik/
+  Aktivitas/Atur ikut membaik; perilaku saat panel ditutup tidak
+  berubah (pill kembali ke tengah). Bilah petunjuk tidak diubah.
+- Teks fase diperbarui ke 8.2 di tiga label: badge header
+  ("Phase 8.2 — Dunia Lebih Kaya"), footer HUD ("Fase 8.2/7 — Dunia
+  Lebih Kaya", tetap "/7" mengikuti pola fase 8.x), dan baris "Versi"
+  di panel Atur. Komentar yang menyebut "Phase 8.1" sebagai riwayat
+  (kapan suatu fitur diperkenalkan) TIDAK diubah — hanya label fase
+  yang diperbarui.
+- Batas jujur: di bawah ~1000px viewport, strip lebih sempit dari
+  tombol terlebar ("Orang Pertama", ~125px) sehingga sebagian tombol
+  bisa terselip di balik panel — secara geometri tak bisa dihindari
+  tanpa menutupi panel. Di viewport ≥ ~1000px (termasuk 1280×720 yang
+  umum) kelima tombol terlihat penuh dalam 2 baris. Perbaikan ini
+  murni tampilan; verifikasi visual dilakukan parent lewat live
+  setelah deploy (browser pemeriksa tak menjangkau server VM).
+- TIDAK diubah: label nama 3D yang bertumpuk (3.2), label raksasa di
+  Orang Pertama, label nama gedung, dunia 3D, `src/ai/*`, logika
+  behavior/task/meeting/event, file Mission Control, 8.3.
+- File: DIUBAH (5): `src/App.tsx` (badge), `src/ui/Hud.tsx`
+  (footer), `src/ui/SettingsPanel.tsx` (baris Versi),
+  `src/index.css` (aturan `.has-panel` pill: `flex-wrap: wrap`,
+  hapus `overflow-x: auto`, komentar diagnosis), `docs/PHASES.md`
+  (§8.2.1 ini). TIDAK ada uji logika baru — perbaikan murni
+  tampilan, uji palsu tidak dibuat.
+
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
@@ -788,7 +840,9 @@ live + feed aktivitas; Acara jadi item sidebar ke-9 supaya fitur Phase 6
 tetap bisa dibuka) · Phase 8.1.1 ✅ (perbaikan tampilan: label tombol
 "Mulai meeting"/"Mulai acara" + pill kamera/bilah petunjuk saat panel
 terbuka) · Phase 8.2 ✅ (dunia lebih kaya: 12 footprint baru + hewan
-ambient + senja; draw call live 291→363, dihitung ulang cara 7.1).
+ambient + senja; draw call live 291→363, dihitung ulang cara 7.1) ·
+Phase 8.2.1 ✅ (teks fase → 8.2 + pill kamera membungkus ke 2 baris
+saat panel overlay terbuka, tanpa scrollbar).
 Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.

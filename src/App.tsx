@@ -494,7 +494,7 @@ function App() {
             <span className="live-dot" />
             LIVE
           </span>
-          <span className="phase-badge">Phase 8.1 — Layout &amp; Feed</span>
+          <span className="phase-badge">Phase 8.2 — Dunia Lebih Kaya</span>
         </div>
         <div className="header-status">
           <span>
