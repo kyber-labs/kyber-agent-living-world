@@ -642,6 +642,141 @@ agent TIDAK berubah.
   `npm test` TOTAL 185 lulus, 0 gagal (tidak ada uji baru — perbaikan
   murni tampilan), lint 0 error (5 warning pola lama).
 
+## Phase 8.2 — Dunia lebih kaya ✅ SELESAI (23 Nov 2026)
+- Latar: lanjutan redesain dari screenshot "Kampus Nailong" (8.1 =
+  layout + feed). Keputusan Bos 23 Nov 17:24: "Lanjut ke 8.2 (dunia
+  lebih kaya)". Percobaan pertama TERPUTUS 23 Nov 17:34 oleh galat
+  runtime ("database error: compaction summary cannot be empty") —
+  galat infrastruktur, BUKAN vonis atas kode; pekerjaan dilanjutkan
+  dari keadaan yang sudah ada (file baru + perubahan sudah di tempat,
+  satu `npm run build` sudah exit 0) — tidak mulai dari nol.
+- Isi 8.2 (hanya ini): gedung baru + kolam + taman bermain + halte +
+  mobil + hewan ambient + suasana senja. Semua primitif low-poly gaya
+  kota Phase 2 (bukan file model eksternal); elemen berulang memakai
+  InstancedMesh (pelajaran 7.1).
+  - Gedung baru (12 footprint di `src/world/buildings/district.ts`,
+    dibangun ke grup kota yang sama via `buildCity`; masuk CityInfo
+    sehingga minimap + validasi builder ikut mengenalinya):
+    masjid (-36,33) 8×8 — badan krem + kubah hijau + menara; sekolah
+    (-24,-34) 12×8 — badan kuning + tiang bendera; klinik (20,-34)
+    10×7 — badan putih + salib merah; toko (8,34) 8×6 — badan ungu +
+    awning merah muda; lapak pasar (-14,36) 13×3 — 5 kios
+    warna-warni (meja/atap/tiang/peti = 4 InstancedMesh); menara kaca
+    (36,-34) 8×8 — badan transparan 20 tinggi + antena (tanpa
+    bayangan — kaca tidak melempar bayangan padat); kolam renang
+    (29,20) 10×6 — tepi + air biru transparan (tanpa bayangan); taman
+    bermain (20,35) 8×7 — perosotan + ayunan (dudukan/tali =
+    InstancedMesh) + bak pasir; halte bus (20,4.5) 3×1,5 — atap +
+    tiang (InstancedMesh) + bangku; 3 mobil parkir statis (12/26/-12,
+    4.5) — badan/kabin/roda = 3 InstancedMesh.
+  - Peta penempatan (semua di lahan kosong, dalam batas ±45; dibuktikan
+    uji, bukan klaim): tidak menabrak gedung lama (kantor (0,-22),
+    arena (25,-12), panggung (-25,-12), 10 rumah z 18 & 27, taman
+    (-23,13)), tidak menabrak jalan salib (lebar 6), tidak saling
+    menabrak; jarak terdekat ke pohon 1,58 (lapak vs pohon (-6,38)) —
+    di atas ambang 1,5; jarak >2,6 dari alas ruang meeting (tidak
+    menutup room). Halte + mobil di tepi jalan timur (z 4,5, di luar
+    badan jalan x ±3).
+  - Hewan ambient (`src/world/animals/Animals.ts`) — dekorasi yang
+    berkeliaran, BUKAN agent: tidak ada di sidebar, tidak bisa
+    di-chat, tidak memegang tugas, tidak memengaruhi status/HUD.
+    2 kucing (jelajah lingkaran (-20,10) r 5, 0,7 unit/dtk) + 2 anjing
+    ((14,8) r 4, 0,9 unit/dtk) + 3 bebek (persegi kolam x 25–33,
+    z 18–22, 0,4 unit/dtk, bobbing di air). Tiap spesies dirakit dari
+    InstancedMesh per bagian tubuh: kucing 4 + anjing 4 + bebek 3 =
+    11 draw call, tanpa bayangan. Gerak prosedural: pilih target acak
+    dalam area, berjalan pelan ke sana, berhenti 2–6 dtk, ulangi;
+    posisi selalu di dalam area (dijamin konstruksi). Bounding sphere
+    manual per spesies supaya frustum culling tetap benar.
+  - Suasana senja: periode Sore kini SENJA — `environmentTargets`
+    dipindah dari `createWorld.ts` ke modul murni baru
+    `src/simulation/environment.ts` (supaya nilainya bisa diuji tanpa
+    DOM/renderer): langit jingga 0xe8894f, matahari hangat 0xff9e4a
+    intensitas 1,1 (dari 1,25), hemi 0,65, kabut 78–165, posisi
+    matahari (30,10,15) — rendah di barat; `createWorld` menggeser
+    posisi matahari mengikuti target (lerp). Pagi/Siang/Malam TIDAK
+    berubah; hujan tetap menimpa langit senja (0x7d8ea3). Jam/cuaca
+    tidak berubah (1 hari simulasi = 10 menit nyata tetap berlaku).
+    Ini pendekatan senja lewat parameter suasana yang sudah ada —
+    bukan skybox baru.
+  - Navigasi: 9 simpul baru (total 20) — mosque (-36,26), school
+    (-24,-26), roadNE (12,-12, persimpangan baru), clinic (20,-26),
+    tower (36,-34), shop (6,30), market (-14,30), playground
+    (20,30), pool (26,12) — + 9 sisi baru; graf tetap terhubung
+    (BFS dari plaza mencapai semua simpul). Catatan uji: sisi
+    roadW→park "menembus" persegi taman — BUKAN cacat: taman adalah
+    ruang terbuka yang memang dimasuki agent (simpul 'park' di tengah
+    footprint taman sejak Phase 3); uji mengecualikan taman dari
+    daftar gedung padat dan mendokumentasikannya.
+  - Minimap: tempat baru tampil otomatis — Minimap menggambar semua
+    `city.buildings` dari CityInfo dengan warna footprint-nya
+    (masjid hijau, sekolah kuning, dst.); tidak ada perubahan
+    `Minimap.tsx`.
+  - Draw call (dihitung ulang dengan cara yang sama persis seperti
+    7.1 — replika scene graph + matematika frustum, `scripts/
+    sceneCount.ts` dipakai bersama phase71-test):
+    tanpa hewan main 236 (tanah/grid/plaza 3, kota 96, ruang meeting
+    24, builder 7, agent 106) + shadow 116 (kota 47, ruang meeting 6,
+    builder 3, agent 60) = 352; dengan hewan main 247 (+11 hewan) +
+    shadow 116 (hewan 0) = **363 total live**. Dibanding 7.1 (291):
+    main 192→236 (+44 mesh baru), shadow 99→116 (+17), total
+    291→352 (+61) tanpa hewan, 291→363 (+72) dengan hewan. Ekspektasi
+    `phase71-test.ts` diperbarui ke angka baru ini (naive 47→91) —
+    dengan menghitung ulang, BUKAN menghapus asersi. Kenaikan ini
+    wajar: 44 mesh baru + 11 hewan; instancing menahan kenaikan
+    (kios/mobil/ayunan/hewan sudah InstancedMesh — tanpa instancing
+    kenaikannya jauh lebih besar).
+  - Uji logika baru `scripts/phase82-test.ts` — **31 lulus, 0 gagal**:
+    penempatan (12 footprint, batas, tidak menabrak gedung lama/
+    jalan/sesama, jarak pohon ≥1,5, jarak room >2,6), graf (11 simpul
+    lama tetap, 9 baru, terhubung, tidak ada sisi menembus gedung
+    padat, simpul baru di luar footprint-nya), hewan (jumlah, tetap
+    dalam area setelah 600 dtk simulasi, 11 InstancedMesh, 0 shadow
+    caster), draw call (main 236/247, shadow 116, total 363),
+    senja (nilai Sore + Pagi/Siang/Malam tidak berubah + hujan
+    menimpa). Catatan jujur: satu asersi awal GAGAL — sisi roadW→park
+    vs persegi taman (lihat catatan di atas); penyebabnya premis uji
+    yang salah (taman diperlakukan sebagai gedung padat), BUKAN cacat
+    aplikasi — diperbaiki di UJI (taman dikecualikan + didokumentasi),
+    bukan dengan mengubah perilaku navigasi Phase 3.
+  - Dampak susulan pada suite lama (ditemukan saat larian gabungan —
+    BUKAN flaky acak, keduanya deterministik dan dijelaskan di sini):
+    (1) phase61: rute BFS terjauh membesar karena graf membesar —
+    mosque→tower = 50,0 dtk (dulu < 30 dtk); batas asersi diperbarui
+    30 → 55 dtk (margin ~10% di atas nilai terukur yang deterministik),
+    pembenaran tenggang 90 dtk tetap berlaku (50,0 + 25 = 75,0 < 90).
+    (2) phase62: dunia membesar → agent lebih tersebar → pairing
+    ambient lebih jarang per satuan waktu — fraksi agent yang paling
+    jarang pairing jatuh tepat di bawah ambang 0,02 pada jendela 420
+    dtk; jendela observasi seksi replay diperpanjang 420 → 900 dtk
+    (bar yang sama, >2% per agent — terukur 0,027–0,096; run
+    terpanjang tidak membesar, tetap 51,9 dtk aria, masih < 60 dtk).
+    Tidak ada asersi yang dihapus di kedua suite; yang diubah hanya
+    batas/jendela yang memang bergantung pada ukuran graf, dengan
+    alasan + angka terukur yang ditulis di komentar uji.
+  - TIDAK diubah: 8.3 (Builder 21 item), "Mode eksekusi nyata",
+    nama/tema "Kampus Nailong", logika behavior/task/meeting/event,
+    `src/ai/*`, warna tema utama, file Mission Control.
+  - File: BARU (5): `src/world/buildings/district.ts`,
+    `src/world/animals/Animals.ts`, `src/simulation/environment.ts`,
+    `scripts/sceneCount.ts`, `scripts/phase82-test.ts`. DIUBAH (8):
+    `src/world/buildings/city.ts` (import district + jenis footprint
+    baru + `buildDistrict` + export `composeMatrix`/`buildInstanced`),
+    `src/world/engine/createWorld.ts` (environmentTargets pindah ke
+    modul + `new Animals(scene)` + `animals.update(dt, t)` + lerp
+    posisi matahari), `src/world/navigation/navGraph.ts` (9 simpul +
+    9 sisi), `scripts/phase71-test.ts` (memakai sceneCount + angka
+    baru 236/116/352), `scripts/phase61-test.ts` (batas rute terjauh
+    30 → 55 dtk), `scripts/phase62-test.ts` (jendela replay 420 →
+    900 dtk), `scripts/run-all-tests.sh` (suite phase82),
+    `docs/PHASES.md` (§8.2 ini).
+  - Verifikasi: `npm run build` lulus (dist `index-CKD6To-b.js`,
+    915.459 byte — naik 10.120 byte dari 8.1.1; CSS
+    `index-BLCfmURm.css`, 15.495 byte, identik 8.1.1), dev (5199) +
+    preview (5198) HTTP 200 termasuk aset JS + CSS, `npm test` TOTAL
+    216 lulus, 0 gagal (33+49+25+20+18+16+24+31), lint 0 error
+    (5 warning pola lama).
+
 ### Status akhir semua fase
 Phase 1 ✅ · Phase 2 ✅ (+2.1) · Phase 3 ✅ (+3.1, +3.2) · Phase 4 ✅
 (Gemini live) · Phase 5 ✅ · Phase 6 ✅ (+6.1, +6.2 — 6.2 penyelidikan,
@@ -652,7 +787,9 @@ komponen aplikasi; bukan cacat) · Phase 8.1 ✅ (layout sidebar + header
 live + feed aktivitas; Acara jadi item sidebar ke-9 supaya fitur Phase 6
 tetap bisa dibuka) · Phase 8.1.1 ✅ (perbaikan tampilan: label tombol
 "Mulai meeting"/"Mulai acara" + pill kamera/bilah petunjuk saat panel
-terbuka). Live Phase 7
+terbuka) · Phase 8.2 ✅ (dunia lebih kaya: 12 footprint baru + hewan
+ambient + senja; draw call live 291→363, dihitung ulang cara 7.1).
+Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.
 

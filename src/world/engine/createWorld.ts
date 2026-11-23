@@ -22,7 +22,9 @@ import type { WorldObject } from '../../types/worldObject';
 import { buildWorldObject } from '../buildings/props';
 import { createWorldClock } from '../../simulation/clock';
 import { FpsTracker } from '../../simulation/fps';
-import { LifeSim, type EnvironmentState, type Vitals, type WeatherKind, type DayPeriod } from '../../simulation/lifeSim';
+import { LifeSim, type EnvironmentState, type Vitals, type WeatherKind } from '../../simulation/lifeSim';
+import { environmentTargets } from '../../simulation/environment';
+import { Animals } from '../animals/Animals';
 import { AgentBehavior } from '../../simulation/behavior';
 import { buildCity, type CityInfo } from '../buildings/city';
 import { buildMeetingRooms } from '../buildings/meetingRooms';
@@ -81,65 +83,6 @@ export interface PerfStats {
 
 const CAMERA_HOME = new THREE.Vector3(0, 40, 75);
 const TARGET_HOME = new THREE.Vector3(0, 0.8, 0);
-
-/** Target suasana (langit, matahari, kabut) per periode hari + cuaca. */
-interface EnvTargets {
-  sky: THREE.Color;
-  sunColor: THREE.Color;
-  sunIntensity: number;
-  hemiIntensity: number;
-  fogNear: number;
-  fogFar: number;
-}
-
-function environmentTargets(period: DayPeriod, weather: WeatherKind): EnvTargets {
-  let sky = 0xbfd9f2;
-  let sun = 0xfff2dd;
-  let sunIntensity = 1.6;
-  let hemiIntensity = 0.9;
-  let fogNear = 90;
-  let fogFar = 180;
-  if (period === 'siang') {
-    sky = 0x9ecfec;
-    sun = 0xffffff;
-    sunIntensity = 1.9;
-    hemiIntensity = 1.0;
-  } else if (period === 'sore') {
-    sky = 0xf0c193;
-    sun = 0xffd9a0;
-    sunIntensity = 1.25;
-    hemiIntensity = 0.75;
-    fogNear = 80;
-    fogFar = 170;
-  } else if (period === 'malam') {
-    sky = 0x232f45;
-    sun = 0x93a8cc;
-    sunIntensity = 0.35;
-    hemiIntensity = 0.35;
-    fogNear = 70;
-    fogFar = 150;
-  }
-  if (weather === 'berawan') {
-    sunIntensity *= 0.8;
-    hemiIntensity *= 0.9;
-    fogNear = Math.min(fogNear, 65);
-    fogFar = Math.min(fogFar, 140);
-  } else if (weather === 'hujan') {
-    sky = 0x7d8ea3;
-    sunIntensity *= 0.55;
-    hemiIntensity *= 0.7;
-    fogNear = 45;
-    fogFar = 110;
-  }
-  return {
-    sky: new THREE.Color(sky),
-    sunColor: new THREE.Color(sun),
-    sunIntensity,
-    hemiIntensity,
-    fogNear,
-    fogFar,
-  };
-}
 
 export function createWorld(container: HTMLDivElement, options: WorldOptions): WorldHandle {
   const { agents, onSelectAgent } = options;
@@ -315,6 +258,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     },
   });
 
+  // Hewan ambient Phase 8.2 — dekorasi yang berkeliaran (bukan agent).
+  const animals = new Animals(scene);
+
   // Cincin seleksi di bawah agent terpilih.
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.55, 0.75, 32),
@@ -415,6 +361,7 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     lastNow = now;
     const t = clock.elapsed();
     behavior.update(dt, t);
+    animals.update(dt, t);
     characters.forEach((character) => character.update(dt, t));
     // Life sim: jam + cuaca + vital (emit ke React maksimal 1x/detik).
     const life = lifeSim.update(dt, liveState);
@@ -432,6 +379,8 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     fog.far += (envTargets.fogFar - fog.far) * k;
     sun.color.lerp(envTargets.sunColor, k);
     sun.intensity += (envTargets.sunIntensity - sun.intensity) * k;
+    // 8.2: posisi matahari ikut bergeser (sore = rendah di barat = senja).
+    sun.position.lerp(envTargets.sunPos, k);
     hemi.intensity += (envTargets.hemiIntensity - hemi.intensity) * k;
     // Hujan: titik jatuh, berputar ke atas saat menyentuh tanah.
     rain.visible = currentWeather === 'hujan';

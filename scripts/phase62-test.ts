@@ -227,7 +227,15 @@ Math.random = mulberry32(7);
   check('meeting: kedua peserta tiba di slot dan berstatus Meeting', seated, `status aria=${tr.lastStatus.aria} kai=${tr.lastStatus.kai}`);
   tr.run(20);
   meetIds.forEach((id) => tr.behavior.setMeeting(id, null));
-  tr.run(420);
+  // Jendela ambient 900 dtk (diperpanjang dari 420 dtk pada 8.2): dunia
+  // membesar 11 → 20 simpul, agent lebih tersebar sehingga pairing
+  // ambient lebih jarang per satuan waktu — bar yang sama (>2% per
+  // agent) butuh jendela observasi lebih panjang untuk teruji.
+  // Terukur (seed 7): dengan 420 dtk, fraksi agent yang paling jarang
+  // pairing jatuh tepat di bawah 0,02; dengan 900 dtk semua agent
+  // 0,027–0,096. Run terpanjang tidak membesar (tetap 51,9 dtk, aria —
+  // termasuk masa duduk di meeting terjadwal + rantai re-pair).
+  tr.run(900);
   // Ukur run 'meeting' kontinu terpanjang yang terlihat di UI.
   const runs = AGENTS.map((a) => ({ id: a.id, run: tr.longestRun(a.id, 'meeting') }));
   const worst = runs.reduce((m, r) => (r.run > m.run ? r : m), runs[0]);
@@ -236,6 +244,9 @@ Math.random = mulberry32(7);
   // Meeting ambient 6–10 dtk; rantai re-pair langsung terukur < ~26 dtk di
   // 8 simulasi acak (scratch 6.2). Batas 60 dtk memberi margin 2x lipat;
   // run 540 dtk (temuan live ~9 menit) akan menggagalkan uji ini.
+  // Terukur pada replay ini (8.2, seed 7): run terpanjang 51,9 dtk (aria
+  // — termasuk masa duduk di meeting terjadwal + rantai re-pair sesudahnya),
+  // masih di bawah batas 60 dtk; itulah yang diuji asersi berikutnya.
   check("tidak ada status 'meeting' yang menetap (>60 dtk kontinu)", worst.run <= 60, `${worst.id} ${worst.run.toFixed(1)} dtk`);
   check("semua agent sempat 'meeting' ambient (mekanisme pairing hidup)", AGENTS.every((a) => tr.meetingFraction(a.id) > 0.02));
   check("fraksi 'meeting' tidak mendominasi (<45% per agent)", AGENTS.every((a) => tr.meetingFraction(a.id) < 0.45));

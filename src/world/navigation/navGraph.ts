@@ -24,6 +24,21 @@ export const NAV_NODES: NavNode[] = [
   { id: 'park', name: 'Taman', x: -23, z: 13 },
   { id: 'resE', name: 'Perumahan Timur', x: 6, z: 22 },
   { id: 'resW', name: 'Perumahan Barat', x: -6, z: 22 },
+  // Phase 8.2: simpul tempat-tempat baru. Tiap sisi di bawah diperiksa
+  // tidak menembus gedung (lihat scripts/phase82-test.ts): 'mosque'
+  // dicapai dari resW (melewati celah antar baris rumah), 'school' dari
+  // stage (melewati timur panggung), 'clinic'/'tower' lewat 'roadNE'
+  // (simpul persimpangan baru), 'shop'/'market'/'playground' lewat
+  // koridor z=30 di selatan baris rumah, 'pool' dari roadE.
+  { id: 'mosque', name: 'Masjid', x: -36, z: 26 },
+  { id: 'school', name: 'Sekolah', x: -24, z: -26 },
+  { id: 'roadNE', name: 'Jalan Timur Laut', x: 12, z: -12 },
+  { id: 'clinic', name: 'Klinik', x: 20, z: -26 },
+  { id: 'tower', name: 'Menara Kaca', x: 36, z: -26 },
+  { id: 'shop', name: 'Toko', x: 6, z: 30 },
+  { id: 'market', name: 'Lapak Pasar', x: -14, z: 30 },
+  { id: 'playground', name: 'Taman Bermain', x: 20, z: 30 },
+  { id: 'pool', name: 'Kolam Renang', x: 26, z: 12 },
 ];
 
 const EDGES: [string, string][] = [
@@ -39,6 +54,16 @@ const EDGES: [string, string][] = [
   ['roadW', 'park'],
   ['roadN', 'resE'],
   ['roadN', 'resW'],
+  // Phase 8.2: sisi ke tempat-tempat baru (lihat komentar simpul di atas).
+  ['resW', 'mosque'],
+  ['stage', 'school'],
+  ['roadS', 'roadNE'],
+  ['roadNE', 'clinic'],
+  ['clinic', 'tower'],
+  ['resE', 'shop'],
+  ['shop', 'market'],
+  ['shop', 'playground'],
+  ['roadE', 'pool'],
 ];
 
 const ADJACENCY = new Map<string, string[]>();

@@ -191,9 +191,14 @@ for (const from of NAV_NODES) {
     maxTravel = Math.max(maxTravel, dist / 2.2);
   }
 }
+// Batas 55 dtk (diperbarui 8.2): graf membesar 11 → 20 simpul, rute BFS
+// terjauh kini mosque→tower = 50,0 dtk (dulu < 30 dtk dengan 11 simpul).
+// Batas 55 memberi margin ~10% di atas nilai terukur yang deterministik
+// (hanya bergantung pada geometri graf yang tetap). Pembenaran tenggang
+// 90 dtk tetap berlaku: 50,0 + 25 = 75,0 < 90 (lihat asersi berikutnya).
 check(
-  'rute BFS terjauh antar simpul < 30 dtk pada 2,2 unit/dtk',
-  maxTravel < 30,
+  'rute BFS terjauh antar simpul < 55 dtk pada 2,2 unit/dtk',
+  maxTravel < 55,
   `terjauh ${maxTravel.toFixed(1)} dtk`,
 );
 check(

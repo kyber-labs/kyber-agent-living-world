@@ -15,11 +15,12 @@
 //   tepi            : pepohonan alam (posisi tetap, bukan acak)
 
 import * as THREE from 'three';
+import { buildDistrict } from './district';
 
 export interface BuildingFootprint {
   id: string;
   name: string;
-  kind: 'office' | 'arena' | 'entertainment' | 'house' | 'park';
+  kind: 'office' | 'arena' | 'entertainment' | 'house' | 'park' | 'mosque' | 'school' | 'clinic' | 'shop' | 'market' | 'tower' | 'pool' | 'playground' | 'busstop' | 'car';
   x: number;
   z: number;
   w: number;
@@ -111,7 +112,7 @@ function makeScreenTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function composeMatrix(
+export function composeMatrix(
   x: number,
   y: number,
   z: number,
@@ -159,7 +160,7 @@ export function houseDoorMatrix(x: number, z: number): THREE.Matrix4 {
 /** Isi satu InstancedMesh dari daftar matriks + hitung bounding sphere
  *  (three tidak menghitungnya otomatis dari instansi — tanpa ini seluruh
  *  mesh bisa ter-cull saat kamera menjauh dari titik asal). */
-function buildInstanced(
+export function buildInstanced(
   geometry: THREE.BufferGeometry,
   material: THREE.Material,
   matrices: THREE.Matrix4[],
@@ -455,6 +456,12 @@ export function buildCity(scene: THREE.Scene): { group: THREE.Group; info: CityI
     rock.castShadow = true;
     group.add(rock);
   });
+
+  // Kawasan baru Phase 8.2 (masjid, sekolah, klinik, toko, lapak pasar,
+  // menara kaca, kolam, taman bermain, halte, mobil) — dibangun ke dalam
+  // grup kota yang sama supaya hitungan draw call + minimap tetap satu
+  // kesatuan; footprint-nya masuk CityInfo (minimap + validasi builder).
+  buildings.push(...buildDistrict(group));
 
   scene.add(group);
   return { group, info: { buildings, roads, trees, bounds: BOUNDS } };
