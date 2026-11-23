@@ -278,6 +278,70 @@ a073ea5). Tiga butir:
   25/25 lulus, regresi Phase 6 49/49 lulus (satu assertion lama diubah
   mengikuti semantik baru + satu ditambah), regresi Phase 5 33/33 lulus.
 
+## Penyelidikan 6.2 — status "Meeting" yang menetap ✅ SELESAI (23 Nov 2026)
+- Temuan live 6.1 (23 Nov 13.33–13.42, deploy eaa19c0): Kai dan Zoe
+  (kadang juga Nova/Leo/Finn) berstatus "Meeting" di sidebar selama
+  ~9 menit, padahal panel Meeting menunjukkan "0 berlangsung" dan
+  keenam ruang "Kosong". Status muncul setelah acara "Pertunjukan"
+  berakhir. Meeting uji pemeriksa sendiri (Aria+Kai, Ruang Sprint,
+  13.34) menjelaskan status Kai selama meeting itu, tapi bukan status
+  Zoe — dan status sudah muncul sejak 13.33, sebelum meeting uji
+  dimulai.
+- KESIMPULAN: BUKAN cacat — tidak ada perubahan perilaku aplikasi.
+  Status yang tertinggal (stale) TIDAK terbukti; yang terbukti adalah
+  meeting ambient yang berulang. Bukti:
+  1. Simulasi ambient murni (10 agent, 600 dtk simulasi, 5 seed):
+     fraksi waktu 'meeting' per agent 9–24%, run 'meeting' kontinu
+     terpanjang yang terlihat di UI 18–26 dtk, re-pair langsung
+     (berpasangan lagi tanpa status 'moving' di antaranya) 4–10x per
+     simulasi. Pada cuplikan tiap 30 dtk, 0–6 agent berstatus Meeting —
+     jadi pemeriksa yang melirik sidebar beberapa kali dalam 9 menit
+     sangat mungkin melihat Kai/Zoe (dan kadang Nova/Leo/Finn)
+     berstatus Meeting di tiap lirikan, padahal tiap meeting
+     individual hanya 6–10 dtk. Rantai re-pair tidak bisa mencapai
+     9 menit: tiap tautan butuh tujuan acak = simpul sendiri (1/11)
+     dan run terpanjang di 8 simulasi tidak pernah melewati ~26 dtk.
+  2. Replay rangkaian live (acara Pertunjukan -> bubar -> meeting
+     terjadwal Aria+Kai -> bubar -> ambient 420 dtk, seed 7): run
+     'meeting' terpanjang 39,8 dtk (Kai — termasuk masa duduk di
+     meeting terjadwal), fraksi meeting 12–20% per agent.
+  3. Ambient + taskFocus (tiruan sesi live: 3 agent memegang tugas
+     'doing', diam 8–12 dtk di simpul sehingga lebih sering jadi
+     pasangan): run terpanjang 24,1 dtk, fraksi meeting 9–20%.
+  4. Skenario pembersihan status (semua lulus di
+     `scripts/phase62-test.ts`): B1 meeting berakhir saat peserta
+     berjalan; B2 meeting berakhir saat peserta di slot (bubar <=2
+     dtk); B3 acara berakhir saat peserta di slot; B4 pasangan ambient
+     ditarik sepihak (pasangan langsung 'idle'); B5 meeting berakhir
+     saat peserta dekat room. Tidak ada jalur yang membuat status
+     'meeting' tertinggal — `setMeeting(null)`/`setEvent(null)`
+     menyetel `dwellUntil = 0`, penugasan dicabut App saat state
+     berubah, dan `releasePartner` membebaskan pasangan secara sinkron.
+- Wart yang didokumentasikan (bukan cacat, perilaku tidak diubah):
+  setelah acara berakhir, peserta bisa LANGSUNG kembali berstatus sama
+  secara ambient tanpa transisi terlihat. Mekanisme yang terbukti
+  (debug seed 23, Rex): peserta berangkat (depart) lalu tujuan acaknya
+  sama dengan simpulnya sendiri (1/11) sehingga langsung "tiba" lagi
+  dan 30% mendapat pendingActivity — tanpa pernah mengemisikan
+  'moving'. Rex: 'entertainment' sejak t=47,6; acara dicabut t=55,6;
+  t=55,7 kembali 'entertainment' (ambient); baru t=67,7 berangkat.
+  Status yang tampil tetap jujur (agent memang menghibur secara
+  ambient) dan dwell ambient dibatasi 8–14 dtk, tapi berakhirnya acara
+  tidak terlihat di sidebar pada kasus ini (~2,7% per peserta per
+  akhir acara). Analog untuk meeting: re-pair langsung dengan
+  ex-pasangan (diukur 4–10x per 600 dtk simulasi). Bila Bos ingin
+  transisi akhir acara/meeting SELALU terlihat, itu keputusan UX
+  terpisah (mis. label terjadwal vs spontan di sidebar) — bukan
+  perbaikan cacat.
+- Tidak ada perubahan kode aplikasi pada 6.2 — hanya uji baru
+  `scripts/phase62-test.ts` (20 assertion) + dokumentasi ini. Uji ini
+  mengunci temuan sebagai regresi: run 'meeting' kontinu tidak boleh
+  melewati 60 dtk.
+- Verifikasi: `npm run build` lulus (dist `index-BgqxJ4fW.js` — identik
+  dengan 6.1 karena tidak ada perubahan `src/`), dev + preview HTTP
+  200, uji logika baru `scripts/phase62-test.ts` 20/20 lulus, regresi
+  Phase 6.1 25/25, Phase 6 49/49, Phase 5 33/33 lulus.
+
 ## Phase 7 — Optimasi, pengujian, dokumentasi
 - LOD, frustum culling, instancing, pengaturan kualitas grafis, monitoring
   FPS/memori, pengujian perangkat + browser + performa + keamanan, laporan
