@@ -1,15 +1,23 @@
 import type { Agent, AgentStatus } from '../types/agent';
 import { STATUS_LABEL } from '../types/agent';
 import type { Task } from '../types/task';
+import type { Vitals } from '../simulation/lifeSim';
 
 interface Props {
   agent: Agent | null;
   liveState?: { status: AgentStatus; location: string };
   currentTask?: Task | null;
+  vitals?: Vitals;
   onChat?: () => void;
 }
 
-export function AgentDetail({ agent, liveState, currentTask, onChat }: Props) {
+const VITAL_ROWS: { key: keyof Vitals; label: string; color: string }[] = [
+  { key: 'energy', label: 'Energi', color: '#f59e0b' },
+  { key: 'focus', label: 'Fokus', color: '#8b5cf6' },
+  { key: 'mood', label: 'Mood', color: '#ec4899' },
+];
+
+export function AgentDetail({ agent, liveState, currentTask, vitals, onChat }: Props) {
   if (!agent) {
     return (
       <aside className="detail">
@@ -36,6 +44,23 @@ export function AgentDetail({ agent, liveState, currentTask, onChat }: Props) {
           <div className="detail-row">
             <span>Tugas</span>
             <strong>{currentTask.title}</strong>
+          </div>
+        )}
+        {vitals && (
+          <div className="vital-block">
+            {VITAL_ROWS.map((row) => (
+              <div key={row.key} className="vital-row">
+                <span className="vital-label">{row.label}</span>
+                <div className="vital-bar">
+                  <div
+                    className="vital-fill"
+                    style={{ width: `${Math.round(vitals[row.key])}%`, background: row.color }}
+                  />
+                </div>
+                <span className="vital-value">{Math.round(vitals[row.key])}</span>
+              </div>
+            ))}
+            <p className="vital-note">Vital simulasi — berubah mengikuti aktivitas &amp; cuaca.</p>
           </div>
         )}
         <p className="detail-desc">{agent.description}</p>

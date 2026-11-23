@@ -2,23 +2,27 @@ import { useEffect, useRef } from 'react';
 import { createWorld, type WorldHandle } from '../world/engine/createWorld';
 import { Minimap } from './Minimap';
 import type { Agent, AgentStatus } from '../types/agent';
+import type { EnvironmentState, Vitals } from '../simulation/lifeSim';
 
 interface Props {
   agents: Agent[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onAgentState: (id: string, status: AgentStatus, location: string) => void;
+  onLifeTick: (vitals: Record<string, Vitals>, env: EnvironmentState) => void;
   worldHandle: { current: WorldHandle | null };
 }
 
-export function WorldView({ agents, selectedId, onSelect, onAgentState, worldHandle }: Props) {
+export function WorldView({ agents, selectedId, onSelect, onAgentState, onLifeTick, worldHandle }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const onSelectRef = useRef(onSelect);
   const onAgentStateRef = useRef(onAgentState);
+  const onLifeTickRef = useRef(onLifeTick);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
     onAgentStateRef.current = onAgentState;
+    onLifeTickRef.current = onLifeTick;
   });
 
   useEffect(() => {
@@ -28,6 +32,7 @@ export function WorldView({ agents, selectedId, onSelect, onAgentState, worldHan
       agents,
       onSelectAgent: (id) => onSelectRef.current(id),
       onAgentState: (id, status, location) => onAgentStateRef.current(id, status, location),
+      onLifeTick: (vitals, env) => onLifeTickRef.current(vitals, env),
     });
     worldHandle.current = handle;
     return () => {

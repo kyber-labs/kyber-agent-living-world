@@ -101,9 +101,55 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
 - Belum: kalender tugas (baru deadline di kartu), sinkronisasi chat ke
   Supabase (tabel ada, wiring menyusul), proksi server-side untuk key.
 
-## Phase 5 — Meeting room, kolaborasi, life simulation
-- 6 ruang meeting, kolaborasi (whiteboard, catatan bersama), jadwal harian,
-  kebutuhan agent (energi/fokus/mood), cuaca dan waktu.
+## Phase 5 — Meeting room, kolaborasi, life simulation ✅ SELESAI (23 Nov 2026)
+- 6 ruang meeting (`src/types/meeting.ts` MEETING_ROOMS, dipetakan ke
+  kawasan yang sudah ada): Ruang Rapat Utama (Gedung Kantor, kap 10),
+  Ruang Sprint (Plaza, kap 8), Ruang Desain (Taman, kap 6), Ruang Data
+  (Arena, kap 6), Ruang Kreatif (Panggung, kap 6), Ruang Santai
+  (Perumahan Timur, kap 6). Visual 3D (`src/world/buildings/meetingRooms.ts`):
+  alas lingkaran + cincin + tiang penanda berlabel nama; alas room yang
+  dipakai meeting tampak lebih tegas; penanda room juga tampil di minimap.
+- Kolaborasi (`src/ui/MeetingPanel.tsx` + `src/simulation/meetingStore.ts`
+  + `src/simulation/meetingLogic.ts`): mulai meeting (pilih room, topik,
+  agenda, peserta — validasi murni: topik wajib, min 2 peserta, maks
+  kapasitas, room belum dipakai, peserta belum ikut meeting lain),
+  whiteboard = catatan bersama per meeting (penulis: Bos atau peserta),
+  akhiri meeting, riwayat meeting selesai + hapus riwayat. Tersimpan di
+  localStorage (`living-world-meetings-v1`); satu meeting contoh yang sudah
+  selesai di-seed (jejak demo, sama seperti seed tugas Phase 4).
+- Perilaku meeting (`src/simulation/behavior.ts`): peserta berjalan ke
+  room via graf BFS yang sudah ada, lalu jalan lurus ke slotnya di
+  lingkaran room (jari-jari 1,3) dan berstatus 'meeting' menghadap pusat
+  selama penugasan ada; meeting berakhir → peserta bubar dan kembali ke
+  aktivitas ambient. Meeting ambient Phase 3 tidak menarik peserta
+  terjadwal (dilewati di findPartner) dan peserta terjadwal tidak memicu
+  aktivitas acak. Bila meeting berakhir saat peserta masih berjalan ke
+  room, ia kembali ke kedatangan biasa.
+- Life simulation (`src/simulation/lifeSim.ts`): vital per agent —
+  energi/fokus/mood (0–100, mulai 85/80/78) — drift per jam simulasi
+  mengikuti status (bekerja/meeting menguras, istirahat memulihkan,
+  celebrating menaikkan mood, energi < 25 menekan mood) + pengaruh cuaca
+  (hujan −0,5 mood/jam). Jam harian: 1 hari simulasi = 10 menit nyata,
+  mulai 08:00; periode Pagi (05–11), Siang (11–15), Sore (15–18), Malam
+  (18–05). Cuaca bergilir (cerah 60% / berawan 25% / hujan 15%), berganti
+  tiap 2–6 jam simulasi. Vital + jam + cuaca tersimpan di localStorage
+  (`living-world-life-v1`) dan dipulihkan saat muat ulang.
+- Suasana 3D (`src/world/engine/createWorld.ts`): warna langit/kabut,
+  intensitas + warna matahari dan cahaya ambient merapat halus ke target
+  tiap periode hari + cuaca (malam gelap, sore hangat, hujan kelabu +
+  kabut rapat); hujan divisualkan 500 titik jatuh yang berputar di atas
+  kota (murah, tanpa tekstur). HUD menampilkan jam + periode + cuaca;
+  panel detail agent menampilkan bar vital (diberi label "Vital simulasi").
+  Semua angka vital/jam/cuaca adalah ATURAN SIMULASI dunia, bukan jawaban
+  model AI — tidak ada klaim AI di fitur ini.
+- Catatan jujur: posisi berdiri peserta dihitung dari urutan peserta
+  (bukan kursi tetap); bila meeting dimulai saat peserta sudah berada di
+  simpul room, ia langsung jalan lurus ke slot. Animasi duduk khusus
+  meeting belum ada (pose meeting = gestur bicara Phase 3).
+- Belum: sync meeting ke Supabase (tabel belum ada — butuh migrasi baru
+  bila diputuskan), jadwal meeting ke depan (baru mulai langsung),
+  pengingat/undangan meeting, pengaruh vital ke kecepatan/kinerja agent
+  (saat ini vital hanya tampil + memengaruhi mood), siklus musim.
 
 ## Phase 6 — Olahraga, hiburan, world builder, analytics
 - Sistem olahraga + kompetisi, hiburan, build mode (katalog objek, simpan/
@@ -116,7 +162,8 @@ didokumentasikan di sini sebagai backlog dan ditampilkan transparan di UI.
 
 ## Backlog transparan (belum ada — jangan diklaim berfungsi)
 - Kalender tugas (baru deadline di kartu), sinkronisasi chat ke Supabase,
-  meeting room, life sim, olahraga, world builder, analytics, mode gelap,
-  autentikasi, animasi berlari dan berbicara yang terpisah.
+  sinkronisasi meeting ke Supabase (tabel belum ada), jadwal meeting ke
+  depan (baru mulai langsung), olahraga, world builder, analytics, mode
+  gelap, autentikasi, animasi berlari dan berbicara yang terpisah.
 - Database live: sinkronisasi tugas aktif bila Supabase dikonfigurasi;
-  sampai saat itu tugas tersimpan lokal (localStorage).
+  sampai saat itu tugas + meeting tersimpan lokal (localStorage).

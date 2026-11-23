@@ -15,9 +15,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Agent, AgentStatus } from '../../types/agent';
+import type { MeetingAssignment, MeetingRoom } from '../../types/meeting';
+import { MEETING_ROOMS } from '../../types/meeting';
 import { createWorldClock } from '../../simulation/clock';
+import { LifeSim, type EnvironmentState, type Vitals, type WeatherKind, type DayPeriod } from '../../simulation/lifeSim';
 import { AgentBehavior } from '../../simulation/behavior';
 import { buildCity, type CityInfo } from '../buildings/city';
+import { buildMeetingRooms } from '../buildings/meetingRooms';
 import { CameraDirector, type CameraMode, type CameraState } from '../camera/CameraDirector';
 import { AgentCharacter } from '../characters/AgentCharacter';
 
@@ -37,8 +41,11 @@ export interface WorldHandle {
   selectAgent: (id: string | null) => void;
   setCameraMode: (mode: CameraMode) => void;
   setTaskFocus: (agentId: string, taskTitle: string | null) => void;
+  setMeetingAssignment: (agentId: string, assignment: MeetingAssignment | null) => void;
+  setRoomActive: (roomId: string, active: boolean) => void;
   getCameraState: () => CameraState;
   getCityInfo: () => CityInfo;
+  getMeetingRooms: () => MeetingRoom[];
   getAgentPositions: () => AgentPosition[];
   focusPoint: (x: number, z: number) => void;
 }
@@ -47,10 +54,70 @@ export interface WorldOptions {
   agents: Agent[];
   onSelectAgent: (id: string | null) => void;
   onAgentState?: (id: string, status: AgentStatus, location: string) => void;
+  onLifeTick?: (vitals: Record<string, Vitals>, env: EnvironmentState) => void;
 }
 
 const CAMERA_HOME = new THREE.Vector3(0, 40, 75);
 const TARGET_HOME = new THREE.Vector3(0, 0.8, 0);
+
+/** Target suasana (langit, matahari, kabut) per periode hari + cuaca. */
+interface EnvTargets {
+  sky: THREE.Color;
+  sunColor: THREE.Color;
+  sunIntensity: number;
+  hemiIntensity: number;
+  fogNear: number;
+  fogFar: number;
+}
+
+function environmentTargets(period: DayPeriod, weather: WeatherKind): EnvTargets {
+  let sky = 0xbfd9f2;
+  let sun = 0xfff2dd;
+  let sunIntensity = 1.6;
+  let hemiIntensity = 0.9;
+  let fogNear = 90;
+  let fogFar = 180;
+  if (period === 'siang') {
+    sky = 0x9ecfec;
+    sun = 0xffffff;
+    sunIntensity = 1.9;
+    hemiIntensity = 1.0;
+  } else if (period === 'sore') {
+    sky = 0xf0c193;
+    sun = 0xffd9a0;
+    sunIntensity = 1.25;
+    hemiIntensity = 0.75;
+    fogNear = 80;
+    fogFar = 170;
+  } else if (period === 'malam') {
+    sky = 0x232f45;
+    sun = 0x93a8cc;
+    sunIntensity = 0.35;
+    hemiIntensity = 0.35;
+    fogNear = 70;
+    fogFar = 150;
+  }
+  if (weather === 'berawan') {
+    sunIntensity *= 0.8;
+    hemiIntensity *= 0.9;
+    fogNear = Math.min(fogNear, 65);
+    fogFar = Math.min(fogFar, 140);
+  } else if (weather === 'hujan') {
+    sky = 0x7d8ea3;
+    sunIntensity *= 0.55;
+    hemiIntensity *= 0.7;
+    fogNear = 45;
+    fogFar = 110;
+  }
+  return {
+    sky: new THREE.Color(sky),
+    sunColor: new THREE.Color(sun),
+    sunIntensity,
+    hemiIntensity,
+    fogNear,
+    fogFar,
+  };
+}
 
 export function createWorld(container: HTMLDivElement, options: WorldOptions): WorldHandle {
   const { agents, onSelectAgent } = options;
@@ -90,7 +157,10 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   controls.update();
 
   // Pencahayaan siang yang cerah (MASTER PROMPT §1).
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 0.9));
+  // Phase 5: intensitas + warna digeser tiap frame menuju target suasana
+  // (pagi/siang/sore/malam + cuaca) lewat environmentTargets di bawah.
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 0.9);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff2dd, 1.6);
   sun.position.set(20, 30, 10);
   sun.castShadow = true;
@@ -131,6 +201,42 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
 
   // Kawasan virtual Phase 2 (MASTER PROMPT §3).
   const city = buildCity(scene);
+
+  // Ruang meeting Phase 5 — zona bernama di kawasan yang sudah ada.
+  const roomVisuals = buildMeetingRooms(scene, MEETING_ROOMS);
+
+  // Life simulation Phase 5 — jam harian, cuaca, vital per agent.
+  const lifeSim = new LifeSim(agents.map((a) => a.id));
+  const initialEnv = lifeSim.getEnvironment();
+  let envTargets = environmentTargets(initialEnv.period, initialEnv.weather);
+  let currentWeather: WeatherKind = initialEnv.weather;
+  // Kirim snapshot awal supaya HUD + panel detail langsung terisi.
+  options.onLifeTick?.(lifeSim.getVitals(), initialEnv);
+
+  // Hujan — titik-titik murah (500) yang jatuh dan berputar di atas kota;
+  // hanya terlihat saat cuaca hujan, tanpa tekstur dan tanpa beban berarti.
+  const RAIN_COUNT = 500;
+  const rainGeo = new THREE.BufferGeometry();
+  const rainPos = new Float32Array(RAIN_COUNT * 3);
+  for (let i = 0; i < RAIN_COUNT; i++) {
+    rainPos[i * 3] = (Math.random() - 0.5) * 60;
+    rainPos[i * 3 + 1] = Math.random() * 25;
+    rainPos[i * 3 + 2] = (Math.random() - 0.5) * 60;
+  }
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+  const rainAttr = rainGeo.getAttribute('position') as THREE.BufferAttribute;
+  const rain = new THREE.Points(
+    rainGeo,
+    new THREE.PointsMaterial({
+      color: 0x9db8d6,
+      size: 0.14,
+      transparent: true,
+      opacity: 0.75,
+      depthWrite: false,
+    }),
+  );
+  rain.visible = false;
+  scene.add(rain);
 
   // Karakter agent 3D + behavior ambient (Phase 3).
   const characters = new Map<string, AgentCharacter>();
@@ -248,6 +354,38 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     const t = clock.elapsed();
     behavior.update(dt, t);
     characters.forEach((character) => character.update(dt, t));
+    // Life sim: jam + cuaca + vital (emit ke React maksimal 1x/detik).
+    const life = lifeSim.update(dt, liveState);
+    if (life) {
+      envTargets = environmentTargets(life.env.period, life.env.weather);
+      currentWeather = life.env.weather;
+      options.onLifeTick?.(life.vitals, life.env);
+    }
+    // Suasana 3D merapat halus ke target (periode hari + cuaca).
+    const k = 1 - Math.exp(-dt * 1.2);
+    const fog = scene.fog as THREE.Fog;
+    (scene.background as THREE.Color).lerp(envTargets.sky, k);
+    fog.color.lerp(envTargets.sky, k);
+    fog.near += (envTargets.fogNear - fog.near) * k;
+    fog.far += (envTargets.fogFar - fog.far) * k;
+    sun.color.lerp(envTargets.sunColor, k);
+    sun.intensity += (envTargets.sunIntensity - sun.intensity) * k;
+    hemi.intensity += (envTargets.hemiIntensity - hemi.intensity) * k;
+    // Hujan: titik jatuh, berputar ke atas saat menyentuh tanah.
+    rain.visible = currentWeather === 'hujan';
+    if (rain.visible) {
+      const arr = rainAttr.array as Float32Array;
+      for (let i = 0; i < RAIN_COUNT; i++) {
+        let y = arr[i * 3 + 1] - 18 * dt;
+        if (y < 0) {
+          y = 22 + Math.random() * 3;
+          arr[i * 3] = (Math.random() - 0.5) * 60;
+          arr[i * 3 + 2] = (Math.random() - 0.5) * 60;
+        }
+        arr[i * 3 + 1] = y;
+      }
+      rainAttr.needsUpdate = true;
+    }
     director.update(dt);
     renderer.render(scene, camera);
   });
@@ -258,6 +396,8 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     resizeObserver.disconnect();
     renderer.domElement.removeEventListener('pointerdown', onPointerDown);
     renderer.domElement.removeEventListener('pointerup', onPointerUp);
+    rainGeo.dispose();
+    (rain.material as THREE.Material).dispose();
     controls.dispose();
     scene.traverse((obj) => {
       if (obj instanceof THREE.Mesh || obj instanceof THREE.Sprite) {
@@ -285,8 +425,12 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     setCameraMode: (mode: CameraMode) => director.setMode(mode),
     setTaskFocus: (agentId: string, taskTitle: string | null) =>
       behavior.setTaskFocus(agentId, taskTitle),
+    setMeetingAssignment: (agentId: string, assignment: MeetingAssignment | null) =>
+      behavior.setMeeting(agentId, assignment),
+    setRoomActive: (roomId: string, active: boolean) => roomVisuals.setActive(roomId, active),
     getCameraState: () => director.getState(),
     getCityInfo: () => city.info,
+    getMeetingRooms: () => MEETING_ROOMS,
     getAgentPositions: () =>
       agents.map((a) => {
         const c = characters.get(a.id);

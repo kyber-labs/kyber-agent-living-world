@@ -1,5 +1,6 @@
 import type { Agent, LiveAgentState } from '../types/agent';
 import type { Task } from '../types/task';
+import { formatClock, PERIOD_LABEL, WEATHER_ICON, WEATHER_LABEL, type EnvironmentState } from '../simulation/lifeSim';
 
 interface Props {
   agents: Agent[];
@@ -7,9 +8,10 @@ interface Props {
   dbConfigured: boolean;
   engineMode: 'live' | 'simulation';
   tasks: Task[];
+  env: EnvironmentState | null;
 }
 
-export function Hud({ agents, liveStates, dbConfigured, engineMode, tasks }: Props) {
+export function Hud({ agents, liveStates, dbConfigured, engineMode, tasks, env }: Props) {
   const states = agents.map((a) => liveStates[a.id]?.status ?? a.status);
   const idle = states.filter((s) => s === 'idle').length;
   const working = states.filter((s) => s === 'working').length;
@@ -21,7 +23,12 @@ export function Hud({ agents, liveStates, dbConfigured, engineMode, tasks }: Pro
       <span>{working} bekerja</span>
       <span>{open} tugas terbuka</span>
       <span>AI: {engineMode === 'live' ? 'Gemini live' : 'Simulasi lokal'}</span>
-      <span>Fase 4/7 — AI Engine &amp; Tugas</span>
+      <span>
+        {env
+          ? `${formatClock(env.minutesOfDay)} · ${PERIOD_LABEL[env.period]} · ${WEATHER_ICON[env.weather]} ${WEATHER_LABEL[env.weather]}`
+          : 'Jam: —'}
+      </span>
+      <span>Fase 5/7 — Meeting &amp; Life Sim</span>
       <span>Database: {dbConfigured ? 'terhubung' : 'belum dikonfigurasi'}</span>
     </footer>
   );

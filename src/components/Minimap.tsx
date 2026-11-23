@@ -55,6 +55,15 @@ export function Minimap({ worldHandle }: Props) {
               ctx.arc(x, z, 2, 0, Math.PI * 2);
               ctx.fill();
             });
+            // Phase 5: penanda ruang meeting (kotak warna room).
+            handle.getMeetingRooms().forEach((r) => {
+              const [x, z] = toMap(r.x, r.z);
+              ctx.fillStyle = r.color;
+              ctx.fillRect(x - 3, z - 3, 6, 6);
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(x - 3, z - 3, 6, 6);
+            });
             handle.getAgentPositions().forEach((a) => {
               const [x, z] = toMap(a.x, a.z);
               ctx.fillStyle = a.color;

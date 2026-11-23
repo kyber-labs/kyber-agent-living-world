@@ -4,12 +4,18 @@ import { isPersistenceConfigured } from './lib/supabase';
 import { AgentEngine } from './ai/engine';
 import { createLlmClient } from './ai/llm';
 import { TaskStore } from './simulation/taskStore';
+import { MeetingStore } from './simulation/meetingStore';
+import { roomSlotPositions, validateStartMeeting } from './simulation/meetingLogic';
+import type { EnvironmentState, Vitals } from './simulation/lifeSim';
 import { WorldView } from './components/WorldView';
 import { AgentList } from './ui/AgentList';
 import { AgentDetail } from './ui/AgentDetail';
 import { AgentChat } from './ui/AgentChat';
 import { Hud } from './ui/Hud';
 import { TaskBoard } from './ui/TaskBoard';
+import { MeetingPanel } from './ui/MeetingPanel';
+import { MEETING_ROOMS, getMeetingRoom } from './types/meeting';
+import type { Meeting, NewMeetingInput } from './types/meeting';
 import type { WorldHandle } from './world/engine/createWorld';
 import type { CameraMode } from './world/camera/CameraDirector';
 import type { AgentStatus, LiveAgentState } from './types/agent';
@@ -34,9 +40,16 @@ function App() {
   const [chatAgentId, setChatAgentId] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [assignNote, setAssignNote] = useState<string | null>(null);
+  // Phase 5: meeting + life simulation.
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [showMeetings, setShowMeetings] = useState(false);
+  const [vitals, setVitals] = useState<Record<string, Vitals>>({});
+  const [env, setEnv] = useState<EnvironmentState | null>(null);
   const worldHandle = useRef<WorldHandle | null>(null);
   const storeRef = useRef<TaskStore | null>(null);
   if (!storeRef.current) storeRef.current = new TaskStore();
+  const meetingStoreRef = useRef<MeetingStore | null>(null);
+  if (!meetingStoreRef.current) meetingStoreRef.current = new MeetingStore();
   const engine = useMemo(() => new AgentEngine(createLlmClient()), []);
   const selected = AGENTS.find((a) => a.id === selectedId) ?? null;
   const chatAgent = AGENTS.find((a) => a.id === chatAgentId) ?? null;
@@ -50,6 +63,50 @@ function App() {
     return store.subscribe(() => setTasks([...store.getTasks()]));
   }, []);
 
+  useEffect(() => {
+    const store = meetingStoreRef.current;
+    if (!store) return undefined;
+    setMeetings(store.getMeetings());
+    return store.subscribe(() => setMeetings([...store.getMeetings()]));
+  }, []);
+
+  // Phase 5: sinkronkan penugasan meeting + penanda room aktif ke dunia 3D
+  // dari state meeting (termasuk saat muat ulang dengan meeting aktif).
+  useEffect(() => {
+    const handle = worldHandle.current;
+    if (!handle) return;
+    const inActive = new Set<string>();
+    meetings
+      .filter((m) => m.status === 'active')
+      .forEach((m) => {
+        const room = getMeetingRoom(m.roomId);
+        if (!room) return;
+        handle.setRoomActive(m.roomId, true);
+        const slots = roomSlotPositions(room, m.participantIds.length);
+        m.participantIds.forEach((agentId, i) => {
+          const slot = slots[i];
+          if (!slot) return;
+          inActive.add(agentId);
+          handle.setMeetingAssignment(agentId, {
+            roomId: room.id,
+            roomName: room.name,
+            nodeId: room.nodeId,
+            x: room.x,
+            z: room.z,
+            slotX: slot.x,
+            slotZ: slot.z,
+          });
+        });
+      });
+    MEETING_ROOMS.forEach((room) => {
+      const busy = meetings.some((m) => m.status === 'active' && m.roomId === room.id);
+      if (!busy) handle.setRoomActive(room.id, false);
+    });
+    AGENTS.forEach((a) => {
+      if (!inActive.has(a.id)) handle.setMeetingAssignment(a.id, null);
+    });
+  }, [meetings]);
+
   // Phase 4: agent yang memegang tugas 'doing' fokus bekerja di dunia 3D.
   useEffect(() => {
     const handle = worldHandle.current;
@@ -62,6 +119,11 @@ function App() {
 
   function handleAgentState(id: string, status: AgentStatus, location: string): void {
     setLiveStates((prev) => ({ ...prev, [id]: { status, location } }));
+  }
+
+  function handleLifeTick(nextVitals: Record<string, Vitals>, nextEnv: EnvironmentState): void {
+    setVitals(nextVitals);
+    setEnv(nextEnv);
   }
 
   function handleModeChange(mode: CameraMode): void {
@@ -99,6 +161,27 @@ function App() {
     }
   }
 
+  function handleStartMeeting(input: NewMeetingInput): string | null {
+    const room = getMeetingRoom(input.roomId);
+    if (!room) return 'Ruang tidak dikenal.';
+    const err = validateStartMeeting(room, input.topic, input.participantIds, meetings, AGENTS);
+    if (err) return err;
+    meetingStoreRef.current?.startMeeting(input);
+    return null;
+  }
+
+  function handleEndMeeting(id: string): void {
+    meetingStoreRef.current?.endMeeting(id);
+  }
+
+  function handleAddNote(meetingId: string, authorId: string | null, text: string): void {
+    meetingStoreRef.current?.addNote(meetingId, authorId, text);
+  }
+
+  function handleDeleteMeeting(id: string): void {
+    meetingStoreRef.current?.deleteMeeting(id);
+  }
+
   const selectedDoingTask = selected
     ? (tasks.find((t) => t.assigneeId === selected.id && t.status === 'doing') ?? null)
     : null;
@@ -108,10 +191,25 @@ function App() {
       <header className="app-header">
         <div className="header-title">
           <h1>AI Agent Living World</h1>
-          <span className="phase-badge">Phase 4 — AI Engine &amp; Tugas</span>
+          <span className="phase-badge">Phase 5 — Meeting &amp; Life Sim</span>
         </div>
         <div className="header-actions">
-          <button type="button" onClick={() => setShowBoard((v) => !v)}>
+          <button
+            type="button"
+            onClick={() => {
+              setShowMeetings((v) => !v);
+              setShowBoard(false);
+            }}
+          >
+            Meeting
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowBoard((v) => !v);
+              setShowMeetings(false);
+            }}
+          >
             Tugas ({openTasks})
           </button>
           <button type="button" onClick={() => handleModeChange('overview')}>
@@ -140,6 +238,7 @@ function App() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             onAgentState={handleAgentState}
+            onLifeTick={handleLifeTick}
             worldHandle={worldHandle}
           />
           {cameraMode === 'first-person' && (
@@ -160,6 +259,16 @@ function App() {
               }}
             />
           )}
+          {showMeetings && (
+            <MeetingPanel
+              meetings={meetings}
+              onStart={handleStartMeeting}
+              onEnd={handleEndMeeting}
+              onAddNote={handleAddNote}
+              onDelete={handleDeleteMeeting}
+              onClose={() => setShowMeetings(false)}
+            />
+          )}
           {chatAgent && (
             <AgentChat
               agent={chatAgent}
@@ -177,10 +286,11 @@ function App() {
           agent={selected}
           liveState={selected ? liveStates[selected.id] : undefined}
           currentTask={selectedDoingTask}
+          vitals={selected ? vitals[selected.id] : undefined}
           onChat={selected ? () => setChatAgentId(selected.id) : undefined}
         />
       </main>
-      <Hud agents={AGENTS} liveStates={liveStates} dbConfigured={dbConfigured} engineMode={engine.mode} tasks={tasks} />
+      <Hud agents={AGENTS} liveStates={liveStates} dbConfigured={dbConfigured} engineMode={engine.mode} tasks={tasks} env={env} />
     </div>
   );
 }
