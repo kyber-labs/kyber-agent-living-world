@@ -13,6 +13,7 @@
 
 import * as THREE from 'three';
 import type { WorldObjectKind } from '../../types/worldObject';
+import { gableRoofMesh, glassMaterial, WARM_ROOF_COLORS } from './city';
 
 function std(color: number, roughness = 0.9): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color, roughness });
@@ -154,10 +155,11 @@ export function makePropGlassTower(): THREE.Group {
   glass.position.y = 4;
   glass.receiveShadow = false;
   g.add(glass);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.3, 3.4), std(0x334155));
-  roof.position.y = 8.15;
-  roof.castShadow = true;
-  g.add(roof);
+  // Phase 9: mahkota limas kaca (dulu pelat datar 0x334155).
+  const crown = new THREE.Mesh(new THREE.ConeGeometry(2.5, 1.4, 4), glassMaterial());
+  crown.rotation.y = Math.PI / 4;
+  crown.position.y = 8.7;
+  g.add(crown);
   const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 8), std(0x3b4756, 0.6));
   antenna.position.y = 9.1;
   g.add(antenna);
@@ -172,9 +174,9 @@ export function makePropOffice(): THREE.Group {
   body.castShadow = true;
   body.receiveShadow = true;
   g.add(body);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.3, 4.9), std(0x334155));
-  roof.position.y = 5.65;
-  roof.castShadow = true;
+  // Phase 9: atap pelana oranye (dulu pelat datar 0x334155).
+  const roof = gableRoofMesh(5.1, 5.1, 2.0, WARM_ROOF_COLORS.orange);
+  roof.position.y = 5.5 + 2.0 / 3;
   g.add(roof);
   const windows = new THREE.Mesh(
     new THREE.BoxGeometry(3.6, 3.6, 0.08),
@@ -245,9 +247,9 @@ export function makePropSchool(): THREE.Group {
   body.castShadow = true;
   body.receiveShadow = true;
   g.add(body);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.35, 4.9), std(0x8a4a3b));
-  roof.position.y = 3.65;
-  roof.castShadow = true;
+  // Phase 9: atap pelana merah bata (dulu pelat datar 0x8a4a3b).
+  const roof = gableRoofMesh(6.6, 5.1, 2.0, WARM_ROOF_COLORS.brick);
+  roof.position.y = 3.5 + 2.0 / 3;
   g.add(roof);
   const door = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 2.2), std(0x2b3a4a, 0.6));
   door.position.set(0, 1.1, 2.28);
@@ -273,9 +275,9 @@ export function makePropClinic(): THREE.Group {
   body.castShadow = true;
   body.receiveShadow = true;
   g.add(body);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(5.9, 0.3, 4.4), std(0x64748b));
-  roof.position.y = 3.35;
-  roof.castShadow = true;
+  // Phase 9: atap pelana hijau toska (dulu pelat datar 0x64748b).
+  const roof = gableRoofMesh(6.1, 4.6, 1.8, WARM_ROOF_COLORS.teal);
+  roof.position.y = 3.2 + 1.8 / 3;
   g.add(roof);
   const crossMat = std(0xef4444, 0.6);
   const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, 0.12), crossMat);
@@ -402,9 +404,9 @@ export function makePropMarket(): THREE.Group {
 /** Halte bus (8.3): atap + tiang + bangku tunggu. */
 export function makePropBusStop(): THREE.Group {
   const g = new THREE.Group();
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(3, 0.12, 1.6), std(0x334155));
-  roof.position.y = 2.4;
-  roof.castShadow = true;
+  // Phase 9: atap pelana hijau daun (dulu pelat datar 0x334155).
+  const roof = gableRoofMesh(3.4, 2.0, 0.9, WARM_ROOF_COLORS.leaf);
+  roof.position.y = 2.4 + 0.9 / 3;
   g.add(roof);
   g.add(
     instanced(new THREE.BoxGeometry(0.1, 2.4, 0.1), std(0x3b4756, 0.6), [

@@ -71,7 +71,7 @@ button {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 7px 14px;
 }
 
@@ -129,7 +129,7 @@ button {
   text-align: left;
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 16px;
   padding: 9px 10px;
   color: var(--text);
 }
@@ -227,7 +227,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 4px;
-  box-shadow: 0 2px 10px rgba(30, 41, 59, 0.15);
+  box-shadow: 0 4px 16px rgba(30, 41, 59, 0.12);
 }
 
 .camera-toolbar button {
@@ -256,8 +256,8 @@ button {
   width: 180px;
   height: 180px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(30, 41, 59, 0.2);
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(30, 41, 59, 0.14);
   cursor: crosshair;
   background: #dce8d5;
 }
@@ -330,7 +330,7 @@ button {
 .detail-card {
   border: 1px solid var(--border);
   border-top: 4px solid var(--primary);
-  border-radius: 10px;
+  border-radius: 16px;
   padding: 14px;
 }
 
@@ -366,7 +366,7 @@ button.primary {
   border: 1px solid var(--primary);
   background: var(--primary);
   color: #ffffff;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 7px 14px;
 }
 
@@ -388,7 +388,11 @@ button.primary:disabled {
   overflow-y: auto;
   background: var(--surface);
   border-left: 1px solid var(--border);
-  box-shadow: -4px 0 16px rgba(30, 41, 59, 0.15);
+  /* Phase 9: sudut kiri membulat + bayangan lebih lembut (panel menempel
+     di tepi kanan, jadi hanya sisi kiri yang membulat). */
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+  box-shadow: -8px 0 28px rgba(30, 41, 59, 0.12);
   padding: 14px;
 }
 
@@ -412,7 +416,7 @@ button.primary:disabled {
 .board-actions button {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 6px 12px;
 }
 
@@ -422,7 +426,7 @@ button.primary:disabled {
   font-size: 13px;
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.4);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 .task-form {
@@ -432,7 +436,7 @@ button.primary:disabled {
   margin-top: 12px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--bg);
 }
 
@@ -450,7 +454,7 @@ button.primary:disabled {
   font-weight: 400;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
   color: var(--text);
 }
@@ -480,7 +484,7 @@ button.primary:disabled {
 .task-card {
   border: 1px solid var(--border);
   border-top: 4px solid var(--primary);
-  border-radius: 10px;
+  border-radius: 16px;
   padding: 10px;
   margin-bottom: 8px;
   background: var(--surface);
@@ -542,7 +546,7 @@ button.primary:disabled {
 .task-actions button {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 4px 9px;
   font-size: 13px;
 }
@@ -564,8 +568,8 @@ button.primary:disabled {
   flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 4px 18px rgba(30, 41, 59, 0.2);
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(30, 41, 59, 0.14);
   /* Perbaikan 6.1: potong isi ke sudut panel supaya gelembung tidak
      melukis keluar batas panel saat daftar pesan digulir. */
   overflow: hidden;
@@ -589,7 +593,7 @@ button.primary:disabled {
 .chat-badges button {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 3px 8px;
 }
 
@@ -678,7 +682,7 @@ button.primary:disabled {
   font: inherit;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
   color: var(--text);
 }
@@ -706,7 +710,7 @@ button.primary:disabled {
 .room-card {
   border: 1px solid var(--border);
   border-top: 4px solid var(--primary);
-  border-radius: 10px;
+  border-radius: 16px;
   padding: 10px;
   background: var(--surface);
   display: flex;
@@ -730,7 +734,7 @@ button.primary:disabled {
 .room-card button {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 5px 10px;
   font-size: 13px;
   align-self: flex-start;
@@ -748,7 +752,7 @@ button.primary:disabled {
 
 .check-fieldset {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 10px;
   margin: 0;
 }
@@ -781,7 +785,7 @@ button.primary:disabled {
 .form-actions button {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 7px 14px;
 }
 
@@ -807,7 +811,7 @@ button.primary:disabled {
 .meeting-card {
   border: 1px solid var(--border);
   border-top: 4px solid var(--primary);
-  border-radius: 10px;
+  border-radius: 16px;
   padding: 12px;
   margin-bottom: 10px;
   background: var(--surface);
@@ -835,7 +839,7 @@ button.primary:disabled {
   font-size: 13px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 6px 10px;
 }
 
@@ -850,7 +854,7 @@ button.primary:disabled {
   font: inherit;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
   color: var(--text);
 }
@@ -863,7 +867,7 @@ button.primary:disabled {
 .note-form button {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 7px 12px;
   white-space: nowrap;
 }
@@ -989,7 +993,7 @@ button.primary:disabled {
   padding: 8px 2px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 16px;
   color: var(--muted);
 }
 
@@ -1066,7 +1070,7 @@ button.primary:disabled {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 7px 14px;
 }
 
@@ -1095,7 +1099,7 @@ button.primary:disabled {
   gap: 10px;
   align-items: baseline;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 8px 10px;
   background: var(--surface);
   font-size: 13px;
@@ -1127,8 +1131,8 @@ button.primary:disabled {
   font-size: 13px;
   color: #ffffff;
   background: rgba(30, 41, 59, 0.92);
-  border-radius: 10px;
-  box-shadow: 0 4px 18px rgba(30, 41, 59, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(30, 41, 59, 0.18);
 }
 
 .activity-toast-text {
@@ -1182,7 +1186,7 @@ button.primary:disabled {
   color: #ffffff;
   background: rgba(99, 102, 241, 0.92);
   border-radius: 999px;
-  box-shadow: 0 2px 10px rgba(30, 41, 59, 0.25);
+  box-shadow: 0 4px 16px rgba(30, 41, 59, 0.16);
   white-space: nowrap;
 }
 
@@ -1202,7 +1206,7 @@ button.primary:disabled {
 .builder-item-actions button {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 4px 9px;
   font-size: 13px;
 }
@@ -1215,7 +1219,7 @@ button.primary:disabled {
   margin-top: 12px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--bg);
 }
 
@@ -1232,7 +1236,7 @@ button.primary:disabled {
   font-weight: 400;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface);
   color: var(--text);
 }
@@ -1255,7 +1259,7 @@ button.primary:disabled {
 
 .stat-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 16px;
   padding: 10px 12px;
   background: var(--surface);
 }

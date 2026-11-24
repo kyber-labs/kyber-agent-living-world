@@ -37,6 +37,16 @@ export function buildReplicaScene(withAnimals = false): ReplicaScene {
   ground.receiveShadow = true;
   scene.add(ground);
 
+  // Phase 9: cincin pasir tepi pulau — seperti createWorld.
+  const sandRim = new THREE.Mesh(
+    new THREE.RingGeometry(45, 48.5, 64),
+    new THREE.MeshStandardMaterial({ color: 0xe7d3a1, roughness: 1 }),
+  );
+  sandRim.rotation.x = -Math.PI / 2;
+  sandRim.position.y = 0.005;
+  sandRim.receiveShadow = true;
+  scene.add(sandRim);
+
   const grid = new THREE.GridHelper(90, 45, 0x7d8a99, 0xb9c4cf);
   grid.position.y = 0.01;
   scene.add(grid);
@@ -148,7 +158,7 @@ export function countShadow(replica: ReplicaScene, shadowCam: THREE.Camera): { t
 
 export function overviewCamera(aspect: number): THREE.PerspectiveCamera {
   const cam = new THREE.PerspectiveCamera(48, aspect, 0.1, 300);
-  cam.position.set(0, 40, 75); // CAMERA_HOME Overview
+  cam.position.set(0, 55, 60); // Phase 9: OVERVIEW_POS Overview (dulu (0,40,75)).
   cam.lookAt(0, 0.8, 0);
   cam.updateMatrixWorld(true);
   return cam;

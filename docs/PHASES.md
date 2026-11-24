@@ -1099,10 +1099,87 @@ kamera via `.top-overlays`; label ruangan sembunyi di Ikuti Agent /
 Orang Pertama; label agent mengecil saat kamera dekat + menumpuk
 vertikal saat bergerombolan — uji 28 assertion) · Phase 8.3.2 ✅
 (petunjuk WASD digabung ke `.world-hint` di mode Orang Pertama —
-pil `.camera-hint` terpisah yang bertumpuk dihapus).
+pil `.camera-hint` terpisah yang bertumpuk dihapus) · Phase 9 ✅
+(redesain kampung: menara kaca ramping + atap miring hangat + kamera
+isometrik + tepi pulau berpasir + senja dominan + panel membulat;
+draw call 363→351; uji 24 assertion).
 Live Phase 7
 ~15:55: badge/HUD/kota identik lulus; FPS 3–4 artefak browser pemeriksa
 tanpa GPU.
+
+## Phase 9 — Redesain tampilan kampung ✅ SELESAI (25 Nov 2026)
+- Latar: Bos menilai tampilan masih "kotak-kotak" dan mau seperti foto
+  "Kampus Nailong" (23 Nov). Phase 8 sudah menyamakan layout + isi dunia,
+  tapi bentuknya masih kotak: menara kantor pusat balok gelap raksasa,
+  atap datar gedung distrik, sudut kamera landai, langit abu-abu sebagian
+  besar hari. Bos menyetujui gambar konsep yang dibuat Muse (pulau bundar
+  bertepi pasir, menara kaca ramping, atap miring hangat, senja jingga) —
+  gambar itu concept art (ada teks rusak + daftar ganda hasil generate),
+  bukan screenshot aplikasi.
+- Perubahan (10 file, 1 baru):
+  - `src/world/buildings/city.ts` — menara kantor pusat dirombak: balok
+    gelap 16×18×10 + pelat datar + tekstur jendela diganti menara kaca
+    ramping 7×13×7 biru muda (0x7dd3fc, transparan 0,55) + mahkota limas
+    kaca + antena; tinggi total ~17,7 (dulu ~22,5); posisi (0, 0, -22)
+    TETAP; footprint minimap 8×8 (dulu 16×10). Fungsi `makeWindowTexture`
+    dihapus (hanya dipakai menara lama). BARU: `WARM_ROOF_COLORS`
+    (bata/oranye/toska/daun), `HQ_TOWER_SPEC`, `glassMaterial()`,
+    `gableRoofMesh()` (atap pelana dari silinder 3-segmen).
+  - `src/world/buildings/district.ts` + `src/world/buildings/props.ts` —
+    atap pelat datar diganti atap pelana warna hangat (sekolah bata,
+    klinik toska, halte daun, kantor kecil oranye) + mahkota limas kaca
+    untuk menara kaca; badan/posisi/footprint gedung TETAP. Catatan:
+    brief awal menyebut hanya props.ts, tapi gedung distrik yang terlihat
+    di dunia adalah district.ts (8.2) — keduanya memakai pola atap yang
+    sama, jadi keduanya diubah dengan aturan yang sama. Yang TIDAK
+    diubah: masjid (sudah berkubah), toko (awning), lapak pasar (kanopi
+    hangat), rumah (sudah limas), kolam/taman/mobil.
+  - `src/world/camera/CameraDirector.ts` + `src/world/engine/createWorld.ts` —
+    home Overview (0,40,75) → (0,55,60), elevasi ~42° (dulu ~28°);
+    CAMERA_HOME/TARGET_HOME lokal di createWorld dihapus — keduanya kini
+    mengimpor OVERVIEW_POS/OVERVIEW_TARGET yang diekspor CameraDirector
+    (satu sumber kebenaran, pelajaran 3.2). `maxDistance` 60 → 95:
+    WAJIB, karena OrbitControls.update() menjepit jarak kamera ke
+    maxDistance — tanpa ini home baru (jarak ~81) dijepit ke 60 dan
+    sudut curam memotong deret rumah selatan (bug yang sama seperti 3.2).
+  - `src/world/engine/createWorld.ts` — cincin pasir RingGeometry(45,
+    48,5) di tepi pulau; grid disamarkan (opacity 0,35 → 0,12, warna
+    lebih pudar); warna awal langit/kabut disamakan dengan Pagi baru.
+  - `src/simulation/environment.ts` — langit Pagi 0xbfd9f2 → 0xccd9e4,
+    Siang 0x9ecfec → 0xbcd9e6 + matahari putih hangat 0xfff3d6; Sore
+    (senja 0xe8894f) dan Malam tidak berubah.
+  - `src/simulation/lifeSim.ts` — jam awal 08:00 (480) → 15:00 (900,
+    `DAY_START_MINUTES`): aplikasi dibuka saat senja; jam tetap berputar
+    1 hari = 10 menit. Pengguna lama yang punya simpanan localStorage
+    tetap memakai jam tersimpannya.
+  - `src/index.css` — radius panel/kartu/tombol membulat (6→10, 8→12,
+    10→16, 12→18 px) + bayangan lebih lembut (blur lebih besar, opacity
+    lebih rendah); `.board-overlay` sudut kiri membulat 18px. Layout,
+    teks, dan aksen indigo TETAP.
+  - `scripts/phase9-test.ts` (BARU, 24 assertion) + `scripts/sceneCount.ts`
+    (kamera replika → home baru + cincin pasir) + `scripts/run-all-tests.sh`.
+- Draw call (dihitung ulang cara 7.1, replika): main 236 → 231, shadow
+  116 → 109, total HUD 352 → 340 (dengan hewan 363 → 351). Penyebab:
+  menara lama 11 grup material main / 9 shadow → menara baru 5 / 2;
+  cincin pasir +1 main. Atap 1-banding-1, tidak menambah. Penghematan
+  instancing yang benar tetap -124 (464 → 340, -26,7% ~ -27%).
+  Uji yang ikut diperbarui angkanya (bukan perilaku): phase71 (naive 91→90,
+  main 236→231, shadow 116→109, pra-instancing 329/147→324/140),
+  phase82 + phase83 (total 363→351), phase5 (jam awal 08:00→15:00),
+  phase82 (langit Siang 0x9ecfec→0xbcd9e6).
+- Yang SENGAJA tidak dilakukan: TANPA laut di sekeliling pulau dan TANPA
+  awan lukis/skybox (keduanya lisensi artistik gambar konsep — langit
+  tetap warna datar + kabut); aksen warna TETAP indigo (hijau di gambar
+  konsep bukan bagian rencana); teks rusak/duplikasi daftar di gambar
+  konsep tidak direproduksi; nav graph, meeting, tugas/chat/Kanban,
+  logika Builder, Supabase, env var, "mode eksekusi nyata", teks fase
+  tidak disentuh.
+- Batas jujur: dari home baru yang curam, tepi selatan pulau (rumput
+  terluar) terpotong di bawah frame pada aspek 16:9 — semua gedung +
+  deret rumah selatan tetap masuk frame; pengguna bisa zoom-out
+  (maxDistance 95) untuk melihat seluruh pulau. Langit lukis berawan
+  di gambar konsep tidak bisa direproduksi — langit kode tetap warna
+  datar + kabut, hanya paletnya yang dihangatkan.
 
 ## Backlog akhir (transparan — belum ada, jangan diklaim berfungsi)
 - Sinkronisasi meeting ke Supabase (tabel belum ada — butuh migrasi baru

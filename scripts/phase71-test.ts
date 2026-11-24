@@ -70,13 +70,13 @@ const { city } = replica;
 // ---------- 1. Reproduksi hitungan naive Phase 7 (menara = 1 mesh) ----------
 // 8.2: 47 -> 91 (44 mesh kawasan baru: masjid 6, sekolah 5, klinik 5,
 // toko 4, lapak pasar 4, menara kaca 3, kolam 2, taman bermain 8,
-// halte 4, mobil 3).
+// halte 4, mobil 3). Phase 9: 91 -> 90 (menara kantor pusat 6 -> 5 mesh).
 let naiveCity = 0;
 city.group.traverse((o) => {
   if (isRenderable(o)) naiveCity += 1;
 });
-check('hitungan naive Phase 7: kota = 91 mesh (47 lama + 44 baru 8.2)', naiveCity === 91, `dapat ${naiveCity}`);
-check('hitungan naive Phase 7: 91 + 24 room + 3 tanah = 118', naiveCity + 24 + 3 === 118);
+check('hitungan naive Phase 9: kota = 90 mesh (46 lama + 44 baru 8.2)', naiveCity === 90, `dapat ${naiveCity}`);
+check('hitungan naive Phase 9: 90 + 24 room + 4 tanah = 118', naiveCity + 24 + 4 === 118);
 
 // Pra-instancing naive: marka 36 + pohon 38 + rumah 30 menggantikan
 // InstancedMesh (marka 2 + pohon 2 + rumah 7).
@@ -84,40 +84,40 @@ const dashCoords: number[] = [];
 for (let c = -40; c <= 40; c += 4) if (Math.abs(c) >= 8) dashCoords.push(c);
 check('pra-instancing: marka jalan 36 mesh (18 per arah)', dashCoords.length === 18);
 check(
-  'pra-instancing naive: kota 184, total 211',
-  naiveCity + (dashCoords.length * 2 - 2) + (19 * 2 - 2) + (10 * 3 - 7) === 184 &&
-    naiveCity + (dashCoords.length * 2 - 2) + (19 * 2 - 2) + (10 * 3 - 7) + 24 + 3 === 211,
+  'pra-instancing naive: kota 183, total 211',
+  naiveCity + (dashCoords.length * 2 - 2) + (19 * 2 - 2) + (10 * 3 - 7) === 183 &&
+    naiveCity + (dashCoords.length * 2 - 2) + (19 * 2 - 2) + (10 * 3 - 7) + 24 + 4 === 211,
 );
 
 // ---------- 2. Main pass yang benar (grup material dihitung) ----------
 const main = countMain(replica, overviewCamera(16 / 9));
-check('main pass Overview 16:9 = 236 draw call', main.total === 236, `dapat ${main.total}`);
+check('main pass Overview 16:9 = 231 draw call', main.total === 231, `dapat ${main.total}`);
 check(
-  'main pass rincian: kota 96, meeting 24, builder 7, agent 106, tanah 3',
-  main.byTag['kota'] === 96 &&
+  'main pass rincian: kota 90, meeting 24, builder 7, agent 106, tanah 4',
+  main.byTag['kota'] === 90 &&
     main.byTag['ruang meeting'] === 24 &&
     main.byTag['builder'] === 7 &&
     main.byTag['agent'] === 106 &&
-    main.byTag['tanah/grid/plaza'] === 3,
+    main.byTag['tanah/grid/plaza'] === 4,
   JSON.stringify(main.byTag),
 );
 const mainNarrow = countMain(replica, overviewCamera(1.0));
-check('main pass aspek 1,0 = 229 (7 mesh ter-cull)', mainNarrow.total === 229, `dapat ${mainNarrow.total}`);
+check('main pass aspek 1,0 = 224 (7 mesh ter-cull)', mainNarrow.total === 224, `dapat ${mainNarrow.total}`);
 
 // ---------- 3. Shadow pass (yang dilupakan hitungan Phase 7) ----------
 const shadow = countShadow(replica, shadowCamera());
-check('shadow pass = 116 draw call', shadow.total === 116, `dapat ${shadow.total}`);
+check('shadow pass = 109 draw call', shadow.total === 109, `dapat ${shadow.total}`);
 check(
-  'shadow pass rincian: kota 47, meeting 6, builder 3, agent 60',
-  shadow.byTag['kota'] === 47 &&
+  'shadow pass rincian: kota 40, meeting 6, builder 3, agent 60',
+  shadow.byTag['kota'] === 40 &&
     shadow.byTag['ruang meeting'] === 6 &&
     shadow.byTag['builder'] === 3 &&
     shadow.byTag['agent'] === 60,
   JSON.stringify(shadow.byTag),
 );
 check(
-  'HUD total tanpa hewan = main + shadow = 352 (live +11 hewan = 363, lihat phase82)',
-  main.total + shadow.total === 352,
+  'HUD total tanpa hewan = main + shadow = 340 (live +11 hewan = 351, lihat phase82)',
+  main.total + shadow.total === 340,
 );
 check(
   'shadow pass nyata (>0) — HUD menghitung main + shadow, bukan main saja',
@@ -166,12 +166,12 @@ for (const x of [-20, -10, 0, 10, 20]) {
 }
 check('rumah pra-instancing di shadow pass: 19/20', houseShadowPre === 19, `dapat ${houseShadowPre}`);
 const shadowPre = shadow.total - 2 - 6 + treeShadowPre + houseShadowPre; // ganti instanced pohon+rumah
-check('shadow pass pra-instancing = 147', shadowPre === 147, `dapat ${shadowPre}`);
+check('shadow pass pra-instancing = 140', shadowPre === 140, `dapat ${shadowPre}`);
 const mainPre = main.total + 34 + 36 + 23; // marka + pohon + rumah individual
-check('main pass pra-instancing = 329', mainPre === 329, `dapat ${mainPre}`);
+check('main pass pra-instancing = 324', mainPre === 324, `dapat ${mainPre}`);
 check(
-  'penghematan benar: total 476 -> 352 = -124 (-26,1% ~ -26%), bukan -34%',
-  mainPre + shadowPre === 476 && main.total + shadow.total === 352 && mainPre + shadowPre - (main.total + shadow.total) === 124,
+  'penghematan benar: total 464 -> 340 = -124 (-26,7% ~ -27%), bukan -34%',
+  mainPre + shadowPre === 464 && main.total + shadow.total === 340 && mainPre + shadowPre - (main.total + shadow.total) === 124,
 );
 
 console.log(`\nHasil: ${passed} lulus, ${failed} gagal`);

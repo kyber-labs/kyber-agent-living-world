@@ -112,8 +112,9 @@ check(
 console.log('== LifeSim ==');
 const sim = new LifeSim(AGENTS.map((a) => a.id));
 const snap = sim.update(60, new Map());
-check('update 60 dtk nyata = +144 menit simulasi', snap !== null && snap.env.minutesOfDay === 624, `dapat ${snap?.env.minutesOfDay}`);
-check('periode 10:24 masih pagi', snap !== null && snap.env.period === 'pagi');
+// Phase 9: jam awal 15:00 (900) — 60 dtk nyata = 900 + 144 = 1044 (17:24, Sore).
+check('update 60 dtk nyata = +144 menit simulasi', snap !== null && snap.env.minutesOfDay === 1044, `dapat ${snap?.env.minutesOfDay}`);
+check('periode 17:24 masih sore', snap !== null && snap.env.period === 'sore');
 check('idle 144 menit menaikkan energi', snap !== null && snap.vitals.aria.energy > 85, `dapat ${snap?.vitals.aria.energy}`);
 
 console.log('== MeetingStore ==');

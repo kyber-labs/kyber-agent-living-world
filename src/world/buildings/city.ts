@@ -1,5 +1,5 @@
 // Kawasan virtual — MASTER PROMPT §3.
-// Phase 2: gedung kantor pusat (6 lantai), arena olahraga, area hiburan,
+// Phase 2: menara kaca ramping kantor pusat (Phase 9, dulu balok 6 lantai), arena olahraga, area hiburan,
 // residensial (10 rumah), taman, jalan, dan alam. Semua geometri nyata
 // (bukan placeholder): bangunan punya dinding, jendela, atap, dan bayangan.
 // Phase 7: pohon, marka jalan, dan rumah digambar sebagai InstancedMesh
@@ -64,29 +64,57 @@ function box(
   return mesh;
 }
 
-function makeWindowTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 384;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas 2D tidak tersedia');
-  ctx.fillStyle = '#93a7bd';
-  ctx.fillRect(0, 0, 256, 384);
-  const cols = 6;
-  const rows = 12;
-  const cw = 256 / cols;
-  const ch = 384 / rows;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      // Pola tetap (bukan acak) supaya fasad konsisten tiap muat.
-      const lit = (c * 7 + r * 13) % 5 < 2;
-      ctx.fillStyle = lit ? '#ffd27a' : '#334155';
-      ctx.fillRect(c * cw + 7, r * ch + 7, cw - 14, ch - 14);
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+/** Palet atap hangat Phase 9 (kampung) — merah bata, oranye, hijau toska,
+ *  hijau daun. Menggantikan pelat datar abu gelap (0x334155/0x64748b). */
+export const WARM_ROOF_COLORS = {
+  brick: 0xb4552d,
+  orange: 0xe07b39,
+  teal: 0x2a9d8f,
+  leaf: 0x5a8f3c,
+} as const;
+
+/** Spesifikasi menara kantor pusat baru (Phase 9) — ramping + kaca biru
+ *  muda, menggantikan balok gelap 16×18×10. */
+export const HQ_TOWER_SPEC = {
+  x: 0,
+  z: -22,
+  w: 8,
+  d: 8,
+  bodyHeight: 13,
+  glassColor: 0x7dd3fc,
+} as const;
+
+/** Material kaca biru muda — menara kaca distrik + kantor pusat baru
+ *  (Phase 9). Sama seperti kaca yang sudah dipakai buildTower. */
+export function glassMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: 0x7dd3fc,
+    transparent: true,
+    opacity: 0.55,
+    roughness: 0.12,
+    metalness: 0.25,
+  });
+}
+
+/** Atap pelana (gable roof) — Phase 9. Prisma segitiga dari silinder
+ *  3-segmen: sumbu silinder diputar ke sumbu X (bubungan), lalu penampang
+ *  segitiga diputar sehingga puncaknya menghadap atas. `w` = panjang
+ *  bubungan (sumbu X), `d` = lebar alas (sumbu Z), `h` = tinggi atap.
+ *  Skala lokal: X penampang = d, Z penampang = h (panjang Y = w).
+ *  Posisi mesh: alas atap berada h/3 di bawah titik tengah (pusat prisma
+ *  berada 1/3 tinggi di atas alas) — pemanggil menaruh mesh di
+ *  `yAtasBadan + h/3`. Dipakai gedung distrik (district.ts) + katalog
+ *  Builder (props.ts) supaya atap miring konsisten di kedua tempat. */
+export function gableRoofMesh(w: number, d: number, h: number, color: number): THREE.Mesh {
+  const roof = new THREE.Mesh(
+    new THREE.CylinderGeometry(1, 1, w, 3),
+    new THREE.MeshStandardMaterial({ color, roughness: 1, flatShading: true }),
+  );
+  // Penampang segitiga sama sisi (r=1): lebar 2·0,866, tinggi 1,5.
+  roof.scale.set(d / (2 * 0.8660254), 1, h / 1.5);
+  roof.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+  roof.castShadow = true;
+  return roof;
 }
 
 function makeScreenTexture(): THREE.CanvasTexture {
@@ -235,41 +263,38 @@ export function buildCity(scene: THREE.Scene): { group: THREE.Group; info: CityI
     ),
   );
 
-  // Gedung kantor pusat — 6 lantai (18 unit) + atap.
+  // Gedung kantor pusat (Phase 9): menara kaca ramping biru muda +
+  // mahkota limas kaca + antena — menggantikan balok gelap 16×18×10
+  // + pelat datar. Posisi (0, 0, -22) TETAP; tinggi total ~17,7 (dulu
+  // ~22,5). Kaca tidak melempar bayangan padat (seperti menara distrik).
   const office = new THREE.Group();
-  office.position.set(0, 0, -22);
-  const winTex = makeWindowTexture();
-  const sideMat = new THREE.MeshStandardMaterial({ map: winTex, roughness: 0.8 });
-  const plainMat = new THREE.MeshStandardMaterial({ color: 0x7d93a8, roughness: 0.85 });
-  const tower = new THREE.Mesh(new THREE.BoxGeometry(16, 18, 10), [
-    sideMat,
-    sideMat,
-    plainMat,
-    plainMat,
-    sideMat,
-    sideMat,
-  ]);
-  tower.position.y = 9;
-  tower.castShadow = true;
-  tower.receiveShadow = true;
+  office.position.set(HQ_TOWER_SPEC.x, 0, HQ_TOWER_SPEC.z);
+  const tower = new THREE.Mesh(
+    new THREE.BoxGeometry(HQ_TOWER_SPEC.w - 1, HQ_TOWER_SPEC.bodyHeight, HQ_TOWER_SPEC.d - 1),
+    glassMaterial(),
+  );
+  tower.position.y = HQ_TOWER_SPEC.bodyHeight / 2;
+  tower.receiveShadow = false;
   office.add(tower);
-  office.add(box(17, 0.6, 11, 0x5b6b7d, 0, 18.3, 0));
-  office.add(box(4, 1.6, 3, 0x5b6b7d, -4, 19.4, 0));
+  const crown = new THREE.Mesh(new THREE.ConeGeometry(5.6, 2.2, 4), glassMaterial());
+  crown.rotation.y = Math.PI / 4;
+  crown.position.y = HQ_TOWER_SPEC.bodyHeight + 1.1;
+  office.add(crown);
   const antenna = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.08, 0.08, 3, 8),
+    new THREE.CylinderGeometry(0.08, 0.08, 2.6, 8),
     new THREE.MeshStandardMaterial({ color: 0x3b4756, roughness: 0.6 }),
   );
-  antenna.position.set(4, 21, 0);
+  antenna.position.set(0, HQ_TOWER_SPEC.bodyHeight + 3.4, 0);
   office.add(antenna);
-  office.add(box(6, 0.5, 2.5, 0x9aa5b1, 0, 4.4, 5.6)); // kanopi pintu masuk
+  office.add(box(4, 0.4, 2, 0x9aa5b1, 0, 3.4, 4.4)); // kanopi pintu masuk
   const door = new THREE.Mesh(
-    new THREE.PlaneGeometry(3, 4),
+    new THREE.PlaneGeometry(2, 3),
     new THREE.MeshStandardMaterial({ color: 0x2b3a4a, roughness: 0.4 }),
   );
-  door.position.set(0, 2, 5.02);
+  door.position.set(0, 1.5, 3.52);
   office.add(door);
   group.add(office);
-  buildings.push({ id: 'hq', name: 'Gedung Kantor Pusat', kind: 'office', x: 0, z: -22, w: 16, d: 10, color: '#7d93a8' });
+  buildings.push({ id: 'hq', name: 'Gedung Kantor Pusat', kind: 'office', x: HQ_TOWER_SPEC.x, z: HQ_TOWER_SPEC.z, w: HQ_TOWER_SPEC.w, d: HQ_TOWER_SPEC.d, color: '#38bdf8' });
 
   // Arena olahraga — dinding melingkar + lapangan + lampu sorot.
   const arena = new THREE.Group();

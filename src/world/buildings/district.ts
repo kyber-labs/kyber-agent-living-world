@@ -12,7 +12,7 @@
 
 import * as THREE from 'three';
 import type { BuildingFootprint } from './city';
-import { buildInstanced, composeMatrix } from './city';
+import { buildInstanced, composeMatrix, gableRoofMesh, glassMaterial, WARM_ROOF_COLORS } from './city';
 
 export const NEW_BUILDINGS: BuildingFootprint[] = [
   { id: 'mosque', name: 'Masjid', kind: 'mosque', x: -36, z: 33, w: 8, d: 8, color: '#15803d' },
@@ -68,7 +68,10 @@ function buildSchool(parent: THREE.Group): void {
   const g = new THREE.Group();
   g.position.set(-24, 0, -34);
   g.add(mesh(new THREE.BoxGeometry(11, 4, 7), std(0xf2c14e), 0, 2, 0));
-  g.add(mesh(new THREE.BoxGeometry(11.6, 0.5, 7.6), std(0x8a4a3b), 0, 4.25, 0));
+  // Phase 9: atap pelana merah bata (dulu pelat datar 0x8a4a3b).
+  const schoolRoof = gableRoofMesh(12, 7.8, 2.4, WARM_ROOF_COLORS.brick);
+  schoolRoof.position.y = 4 + 2.4 / 3;
+  g.add(schoolRoof);
   g.add(mesh(new THREE.PlaneGeometry(1.6, 2.6), std(0x2b3a4a, 0.6), 0, 1.3, 3.52, false, false));
   g.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 4, 8), std(0x3b4756, 0.6), 4.5, 2, 3.2));
   const flag = mesh(new THREE.PlaneGeometry(0.9, 0.6), new THREE.MeshStandardMaterial({ color: 0xef4444, side: THREE.DoubleSide, roughness: 0.8 }), 4.98, 3.7, 3.2, false, false);
@@ -82,7 +85,10 @@ function buildClinic(parent: THREE.Group): void {
   const g = new THREE.Group();
   g.position.set(20, 0, -34);
   g.add(mesh(new THREE.BoxGeometry(9, 3.5, 6), std(0xf8fafc), 0, 1.75, 0));
-  g.add(mesh(new THREE.BoxGeometry(9.5, 0.4, 6.5), std(0x64748b), 0, 3.7, 0));
+  // Phase 9: atap pelana hijau toska (dulu pelat datar 0x64748b).
+  const clinicRoof = gableRoofMesh(10, 6.6, 2.0, WARM_ROOF_COLORS.teal);
+  clinicRoof.position.y = 3.5 + 2.0 / 3;
+  g.add(clinicRoof);
   const crossMat = std(0xef4444, 0.6);
   g.add(mesh(new THREE.BoxGeometry(0.35, 1.0, 0.15), crossMat, 0, 2.85, 3.05, false, false));
   g.add(mesh(new THREE.BoxGeometry(1.0, 0.35, 0.15), crossMat, 0, 2.85, 3.05, false, false));
@@ -166,7 +172,11 @@ function buildTower(parent: THREE.Group): void {
   glass.position.y = 10;
   glass.receiveShadow = false;
   g.add(glass);
-  g.add(mesh(new THREE.BoxGeometry(7.6, 0.5, 7.6), std(0x334155), 0, 20.25, 0));
+  // Phase 9: mahkota limas kaca (dulu pelat datar 0x334155).
+  const crown = new THREE.Mesh(new THREE.ConeGeometry(5.6, 2.0, 4), glassMaterial());
+  crown.rotation.y = Math.PI / 4;
+  crown.position.y = 21;
+  g.add(crown);
   g.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 3, 8), std(0x3b4756, 0.6), 0, 22, 0, false, false));
   parent.add(g);
 }
@@ -233,7 +243,10 @@ function buildPlayground(parent: THREE.Group): void {
 function buildBusStop(parent: THREE.Group): void {
   const g = new THREE.Group();
   g.position.set(20, 0, 4.5);
-  g.add(mesh(new THREE.BoxGeometry(3, 0.12, 1.6), std(0x334155), 0, 2.4, 0));
+  // Phase 9: atap pelana hijau daun (dulu pelat datar 0x334155).
+  const stopRoof = gableRoofMesh(3.4, 2.0, 0.9, WARM_ROOF_COLORS.leaf);
+  stopRoof.position.y = 2.4 + 0.9 / 3;
+  g.add(stopRoof);
   g.add(
     buildInstanced(
       new THREE.BoxGeometry(0.1, 2.4, 0.1),

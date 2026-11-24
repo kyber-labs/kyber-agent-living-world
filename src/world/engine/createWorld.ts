@@ -31,7 +31,7 @@ import { Animals } from '../animals/Animals';
 import { AgentBehavior } from '../../simulation/behavior';
 import { buildCity, type CityInfo } from '../buildings/city';
 import { buildMeetingRooms } from '../buildings/meetingRooms';
-import { CameraDirector, type CameraMode, type CameraState } from '../camera/CameraDirector';
+import { CameraDirector, OVERVIEW_POS, OVERVIEW_TARGET, type CameraMode, type CameraState } from '../camera/CameraDirector';
 import { AgentCharacter } from '../characters/AgentCharacter';
 
 export interface AgentPosition {
@@ -92,9 +92,6 @@ export interface PerfStats {
   drawCalls: number;
 }
 
-const CAMERA_HOME = new THREE.Vector3(0, 40, 75);
-const TARGET_HOME = new THREE.Vector3(0, 0.8, 0);
-
 export function createWorld(container: HTMLDivElement, options: WorldOptions): WorldHandle {
   const { agents, onSelectAgent } = options;
   const clock = createWorldClock();
@@ -113,10 +110,10 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xbfd9f2);
+  scene.background = new THREE.Color(0xccd9e4); // Phase 9: samakan dengan langit Pagi yang dihangatkan.
   // 3.2: kabut digeser (90–180) karena kamera Overview kini jauh (75 unit)
   // — kota (jarak 55–97) tetap jernih, hanya tepi tanah yang memudar.
-  scene.fog = new THREE.Fog(0xbfd9f2, 90, 180);
+  scene.fog = new THREE.Fog(0xccd9e4, 90, 180);
 
   const camera = new THREE.PerspectiveCamera(
     48,
@@ -124,14 +121,19 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     0.1,
     300,
   );
-  camera.position.copy(CAMERA_HOME);
+  camera.position.copy(OVERVIEW_POS);
 
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.copy(TARGET_HOME);
+  controls.target.copy(OVERVIEW_TARGET);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.minDistance = 4;
-  controls.maxDistance = 60;
+  // Phase 9: 95 (dulu 60) — home Overview baru berjarak ~81 dari target;
+  // tanpa ini OrbitControls.update() menjepit kamera kembali ke 60 dan
+  // sudut curam akan memotong deret rumah selatan (bug yang sama seperti
+  // yang diperbaiki 3.2). Pengguna juga bisa zoom-out lebih jauh untuk
+  // melihat seluruh pulau.
+  controls.maxDistance = 95;
   controls.maxPolarAngle = Math.PI / 2 - 0.05;
   controls.update();
 
@@ -162,11 +164,26 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const grid = new THREE.GridHelper(90, 45, 0x7d8a99, 0xb9c4cf);
+  // Phase 9: cincin pasir di tepi pulau (r 45–48,5) — pulau kampung
+  // bertepi pantai seperti gambar konsep. TANPA laut di sekelilingnya
+  // (lisensi artistik gambar konsep, bukan bagian rencana): di luar
+  // cincin, tanah memudar ke kabut seperti sebelumnya.
+  const sandRim = new THREE.Mesh(
+    new THREE.RingGeometry(45, 48.5, 64),
+    new THREE.MeshStandardMaterial({ color: 0xe7d3a1, roughness: 1 }),
+  );
+  sandRim.rotation.x = -Math.PI / 2;
+  sandRim.position.y = 0.005;
+  sandRim.receiveShadow = true;
+  scene.add(sandRim);
+
+  // Phase 9: grid disamarkan (opacity 0,35 -> 0,12, warna lebih pudar)
+  // supaya tanah terbaca sebagai pulau kampung, bukan lapangan grafik.
+  const grid = new THREE.GridHelper(90, 45, 0x9aa5b1, 0xccd5dd);
   grid.position.y = 0.01;
   const gridMat = grid.material as THREE.Material;
   gridMat.transparent = true;
-  gridMat.opacity = 0.35;
+  gridMat.opacity = 0.12;
   scene.add(grid);
 
   const plaza = new THREE.Mesh(

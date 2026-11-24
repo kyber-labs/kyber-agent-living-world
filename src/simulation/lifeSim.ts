@@ -47,6 +47,11 @@ export const PERIOD_LABEL: Record<DayPeriod, string> = {
 
 /** 1 hari simulasi = 10 menit nyata. */
 export const DAY_LENGTH_SECONDS = 600;
+/** Jam awal hari simulasi — Phase 9: 900 = 15:00 (Sore/senja), dulu 480
+ *  (08:00). Aplikasi dibuka saat senja supaya kesan pertama sesuai
+ *  gambar konsep; jam tetap berputar 1 hari = 10 menit. Pengguna lama
+ *  yang punya simpanan localStorage tetap memakai jam tersimpannya. */
+export const DAY_START_MINUTES = 900;
 /** Menit simulasi per detik nyata. */
 export const MINUTES_PER_REAL_SECOND = 1440 / DAY_LENGTH_SECONDS;
 
@@ -130,7 +135,7 @@ export class LifeSim {
 
   constructor(agentIds: string[]) {
     this.vitals = Object.fromEntries(agentIds.map((id) => [id, { ...DEFAULT_VITALS }]));
-    this.minutesOfDay = 480; // 08:00
+    this.minutesOfDay = DAY_START_MINUTES;
     this.weather = 'cerah';
     this.weatherLeftMin = 240;
     this.loadLocal(agentIds);

@@ -243,16 +243,16 @@ console.log('== 8.2: draw call ==');
 const replicaNoAnimals = buildReplicaScene(false);
 const mainNoAnimals = countMain(replicaNoAnimals, overviewCamera(16 / 9));
 const shadowNoAnimals = countShadow(replicaNoAnimals, shadowCamera());
-check('main tanpa hewan = 236 (konsisten dengan phase71)', mainNoAnimals.total === 236, `dapat ${mainNoAnimals.total}`);
-check('shadow tanpa hewan = 116 (konsisten dengan phase71)', shadowNoAnimals.total === 116, `dapat ${shadowNoAnimals.total}`);
+check('main tanpa hewan = 231 (konsisten dengan phase71)', mainNoAnimals.total === 231, `dapat ${mainNoAnimals.total}`);
+check('shadow tanpa hewan = 109 (konsisten dengan phase71)', shadowNoAnimals.total === 109, `dapat ${shadowNoAnimals.total}`);
 const replica = buildReplicaScene(true);
 const main = countMain(replica, overviewCamera(16 / 9));
 const shadow = countShadow(replica, shadowCamera());
-check('main dengan hewan = 247 (236 + 11 hewan)', main.total === 247, `dapat ${main.total}`);
+check('main dengan hewan = 242 (231 + 11 hewan)', main.total === 242, `dapat ${main.total}`);
 check('hewan di main pass = 11', (main.byTag['hewan'] ?? 0) === 11, JSON.stringify(main.byTag));
-check('shadow dengan hewan = 116 (hewan tanpa bayangan)', shadow.total === 116, `dapat ${shadow.total}`);
+check('shadow dengan hewan = 109 (hewan tanpa bayangan)', shadow.total === 109, `dapat ${shadow.total}`);
 check('hewan di shadow pass = 0', (shadow.byTag['hewan'] ?? 0) === 0, JSON.stringify(shadow.byTag));
-check('HUD total baru = 247 + 116 = 363', main.total + shadow.total === 363);
+check('HUD total baru = 242 + 109 = 351', main.total + shadow.total === 351);
 
 // ---------- 5. Suasana senja ----------
 console.log('== 8.2: suasana senja ==');
@@ -262,7 +262,8 @@ check('matahari Sore hangat (0xff9e4a)', sore.sunColor.getHex() === 0xff9e4a, `d
 check('intensitas Sore (1,1) lebih redup dari Siang (1,9)', sore.sunIntensity === 1.1 && environmentTargets('siang', 'cerah').sunIntensity === 1.9);
 check('matahari Sore rendah (y=10) di barat (x=30)', sore.sunPos.y === 10 && sore.sunPos.x === 30, `dapat (${sore.sunPos.x},${sore.sunPos.y},${sore.sunPos.z})`);
 check('matahari Pagi/Siang tetap tinggi (y>=30)', environmentTargets('pagi', 'cerah').sunPos.y >= 30 && environmentTargets('siang', 'cerah').sunPos.y >= 30);
-check('langit Siang (0x9ecfec) dan Malam (0x232f45) tidak berubah', environmentTargets('siang', 'cerah').sky.getHex() === 0x9ecfec && environmentTargets('malam', 'cerah').sky.getHex() === 0x232f45);
+// Phase 9: langit Siang dihangatkan (0x9ecfec -> 0xbcd9e6); Malam tetap.
+check('langit Siang dihangatkan Phase 9 (0xbcd9e6) dan Malam (0x232f45) tidak berubah', environmentTargets('siang', 'cerah').sky.getHex() === 0xbcd9e6 && environmentTargets('malam', 'cerah').sky.getHex() === 0x232f45);
 check('hujan tetap menimpa langit senja (0x7d8ea3)', environmentTargets('sore', 'hujan').sky.getHex() === 0x7d8ea3);
 
 console.log(`\nHasil: ${passed} lulus, ${failed} gagal`);

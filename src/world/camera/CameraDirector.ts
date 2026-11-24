@@ -24,8 +24,8 @@ export interface DirectorOptions {
   getFirstAgentId: () => string | null;
 }
 
-const OVERVIEW_POS = new THREE.Vector3(0, 40, 75); // 3.2: dari sisi selatan, jauh + tinggi — seluruh kota termasuk deret rumah selatan masuk frame (sebelumnya 14,10,14: rumah selatan di luar sudut pandang).
-const OVERVIEW_TARGET = new THREE.Vector3(0, 0.8, 0);
+export const OVERVIEW_POS = new THREE.Vector3(0, 55, 60); // Phase 9: home Overview lebih isometrik (curam, seperti diorama) — elevasi ~42° (dulu ~28° di (0,40,75) sejak 3.2). Diekspor supaya createWorld memakai SATU sumber kebenaran yang sama (pelajaran 3.2: CAMERA_HOME dan OVERVIEW_POS harus selalu sama).
+export const OVERVIEW_TARGET = new THREE.Vector3(0, 0.8, 0);
 const TOP_POS = new THREE.Vector3(0, 44, 0.01);
 const TOP_TARGET = new THREE.Vector3(0, 0, 0);
 const EYE_HEIGHT = 1.7;
