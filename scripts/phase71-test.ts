@@ -19,6 +19,12 @@
 // ter-cull dari posisi kamera baru), shadow 109 -> 121, total
 // 340 -> 352 (dengan hewan 351 -> 363, lihat phase82-test.ts).
 // Rincian baru ada di docs/PHASES.md §9.1.
+//
+// PEMBARUAN 9.2 (25 Nov 2026): home Overview (0,55,75) -> (0,63.8,84.8)
+// + target y 0,8 -> 7 (tilt ke atas ~3°) supaya puncak menara masuk
+// frame. Main 231 -> 232 (+1: antena menara distrik yang dulu ter-cull
+// di tepi atas frame kini ter-render — justru bukti perbaikannya);
+// shadow TETAP 121; total 352 -> 353 (dengan hewan 363 -> 364).
 import * as THREE from 'three';
 import {
   buildReplicaScene,
@@ -91,10 +97,10 @@ check(
 
 // ---------- 2. Main pass yang benar (grup material dihitung) ----------
 const main = countMain(replica, overviewCamera(16 / 9));
-check('main pass Overview 16:9 = 231 draw call', main.total === 231, `dapat ${main.total}`);
+check('main pass Overview 16:9 = 232 draw call', main.total === 232, `dapat ${main.total}`);
 check(
-  'main pass rincian: kota 89, meeting 24, builder 7, agent 106, tanah 5',
-  main.byTag['kota'] === 89 &&
+  'main pass rincian: kota 90, meeting 24, builder 7, agent 106, tanah 5',
+  main.byTag['kota'] === 90 &&
     main.byTag['ruang meeting'] === 24 &&
     main.byTag['builder'] === 7 &&
     main.byTag['agent'] === 106 &&
@@ -102,7 +108,7 @@ check(
   JSON.stringify(main.byTag),
 );
 const mainNarrow = countMain(replica, overviewCamera(1.0));
-check('main pass aspek 1,0 = 225 (6 mesh ter-cull)', mainNarrow.total === 225, `dapat ${mainNarrow.total}`);
+check('main pass aspek 1,0 = 230 (2 mesh ter-cull)', mainNarrow.total === 230, `dapat ${mainNarrow.total}`);
 
 // ---------- 3. Shadow pass (yang dilupakan hitungan Phase 7) ----------
 const shadow = countShadow(replica, shadowCamera());
@@ -116,8 +122,8 @@ check(
   JSON.stringify(shadow.byTag),
 );
 check(
-  'HUD total tanpa hewan = main + shadow = 352 (live +11 hewan = 363, lihat phase82)',
-  main.total + shadow.total === 352,
+  'HUD total tanpa hewan = main + shadow = 353 (live +11 hewan = 364, lihat phase82)',
+  main.total + shadow.total === 353,
 );
 check(
   'shadow pass nyata (>0) — HUD menghitung main + shadow, bukan main saja',
@@ -168,10 +174,10 @@ check('rumah pra-instancing di shadow pass: 20/20', houseShadowPre === 20, `dapa
 const shadowPre = shadow.total - 2 - 6 + treeShadowPre + houseShadowPre; // ganti instanced pohon+rumah
 check('shadow pass pra-instancing = 171', shadowPre === 171, `dapat ${shadowPre}`);
 const mainPre = main.total + 34 + 36 + 23; // marka + pohon + rumah individual
-check('main pass pra-instancing = 324', mainPre === 324, `dapat ${mainPre}`);
+check('main pass pra-instancing = 325', mainPre === 325, `dapat ${mainPre}`);
 check(
-  'penghematan benar: total 495 -> 352 = -143 (-28,9% ~ -29%), bukan -34%',
-  mainPre + shadowPre === 495 && main.total + shadow.total === 352 && mainPre + shadowPre - (main.total + shadow.total) === 143,
+  'penghematan benar: total 496 -> 353 = -143 (-28,8% ~ -29%), bukan -34%',
+  mainPre + shadowPre === 496 && main.total + shadow.total === 353 && mainPre + shadowPre - (main.total + shadow.total) === 143,
 );
 
 console.log(`\nHasil: ${passed} lulus, ${failed} gagal`);

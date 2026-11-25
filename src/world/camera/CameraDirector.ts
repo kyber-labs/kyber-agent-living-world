@@ -24,8 +24,8 @@ export interface DirectorOptions {
   getFirstAgentId: () => string | null;
 }
 
-export const OVERVIEW_POS = new THREE.Vector3(0, 55, 75); // 9.1: rig kamera digeser murni ke selatan +15 (dulu (0,55,60)) — arah pandang, elevasi ~42°, dan jarak home ~81 TETAP sama; yang berubah hanya target ikut ke selatan supaya tepi selatan pulau masuk frame. Dihitung dari proyeksi nyata (FOV 48°, aspek 16:9): titik terjauh pulau (lingkaran r 48,5) max |NDC| 1,64 -> 0,92 di home, 0,73 saat zoom-out mentok (maxDistance 95 TETAP). Harga: pusat pulau kini di NDC y +0,23 (sedikit di atas tengah frame — seperti gambar konsep, laut jadi latar depan bawah) dan tepi utara sedikit lebih berkabut.
-export const OVERVIEW_TARGET = new THREE.Vector3(0, 0.8, 15);
+export const OVERVIEW_POS = new THREE.Vector3(0, 63.8, 84.8); // 9.2: rig digeser + target dinaikkan (dulu (0,55,75)/(0,0.8,15)) — target y 0,8 -> 7 memiringkan sumbu pandang ke atas ~3° supaya puncak menara masuk frame; elevasi 42,1° -> 39,1°, jarak home 81 -> 90. Dihitung dari proyeksi nyata (FOV 48°, aspek 16:9) atas titik jangkar 3D (lihat phase92-test.ts): ujung antena menara distrik (36,23.5,-34) NDC y 1,09 -> 0,84; antena HQ 0,87 -> 0,64; menara masjid masuk frame bahkan di aspek 4:3. Harga: pulau sedikit mengecil (tanah max |NDC| 0,92 -> 0,87, -5%) dan pusat pulau bergeser sedikit ke bawah frame.
+export const OVERVIEW_TARGET = new THREE.Vector3(0, 7, 15);
 const TOP_POS = new THREE.Vector3(0, 44, 0.01);
 const TOP_TARGET = new THREE.Vector3(0, 0, 0);
 const EYE_HEIGHT = 1.7;

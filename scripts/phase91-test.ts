@@ -83,14 +83,14 @@ check(
 // ---------- 2. Bingkai penuh 16:9 ----------
 console.log('== 9.1: bingkai penuh ==');
 const homeDist = OVERVIEW_POS.distanceTo(OVERVIEW_TARGET);
-check('jarak home ~81 < maxDistance 95 (tidak dijepit OrbitControls)', homeDist < 95, `dapat ${homeDist.toFixed(1)}`);
+check('jarak home ~90 < maxDistance 110 (tidak dijepit OrbitControls)', homeDist < 110, `dapat ${homeDist.toFixed(1)}`);
 const home = maxNdc(OVERVIEW_POS, OVERVIEW_TARGET, 16 / 9);
 check('home 16:9: seluruh pulau masuk frame (max |NDC| <= 0,93)', home.max <= 0.93, `dapat ${home.max.toFixed(3)}`);
 check('home 16:9: tepi selatan masuk frame (y >= -0,93)', home.southY >= -0.93, `dapat ${home.southY.toFixed(3)}`);
 check('home 16:9: tepi utara masuk frame (y <= 0,93)', home.northY <= 0.93, `dapat ${home.northY.toFixed(3)}`);
 // Zoom-out mentok: kamera menjauh sepanjang sinar target -> posisi home
-// sampai jarak 95 (maxDistance di createWorld.ts).
-const k = 95 / homeDist;
+// sampai jarak 110 (maxDistance di createWorld.ts, 9.2: dulu 95).
+const k = 110 / homeDist;
 const farPos = new THREE.Vector3().copy(OVERVIEW_TARGET).addScaledVector(new THREE.Vector3().subVectors(OVERVIEW_POS, OVERVIEW_TARGET), k);
 const far = maxNdc(farPos, OVERVIEW_TARGET, 16 / 9);
 check('zoom-out mentok: seluruh pulau tetap masuk frame (max |NDC| <= 0,93)', far.max <= 0.93, `dapat ${far.max.toFixed(3)}`);

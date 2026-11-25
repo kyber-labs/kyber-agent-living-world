@@ -243,16 +243,16 @@ console.log('== 8.2: draw call ==');
 const replicaNoAnimals = buildReplicaScene(false);
 const mainNoAnimals = countMain(replicaNoAnimals, overviewCamera(16 / 9));
 const shadowNoAnimals = countShadow(replicaNoAnimals, shadowCamera());
-check('main tanpa hewan = 231 (konsisten dengan phase71)', mainNoAnimals.total === 231, `dapat ${mainNoAnimals.total}`);
+check('main tanpa hewan = 232 (konsisten dengan phase71)', mainNoAnimals.total === 232, `dapat ${mainNoAnimals.total}`);
 check('shadow tanpa hewan = 121 (konsisten dengan phase71)', shadowNoAnimals.total === 121, `dapat ${shadowNoAnimals.total}`);
 const replica = buildReplicaScene(true);
 const main = countMain(replica, overviewCamera(16 / 9));
 const shadow = countShadow(replica, shadowCamera());
-check('main dengan hewan = 242 (231 + 11 hewan)', main.total === 242, `dapat ${main.total}`);
+check('main dengan hewan = 243 (232 + 11 hewan)', main.total === 243, `dapat ${main.total}`);
 check('hewan di main pass = 11', (main.byTag['hewan'] ?? 0) === 11, JSON.stringify(main.byTag));
 check('shadow dengan hewan = 121 (hewan tanpa bayangan)', shadow.total === 121, `dapat ${shadow.total}`);
 check('hewan di shadow pass = 0', (shadow.byTag['hewan'] ?? 0) === 0, JSON.stringify(shadow.byTag));
-check('HUD total baru = 242 + 121 = 363', main.total + shadow.total === 363);
+check('HUD total baru = 243 + 121 = 364', main.total + shadow.total === 364);
 
 // ---------- 5. Suasana senja ----------
 console.log('== 8.2: suasana senja ==');

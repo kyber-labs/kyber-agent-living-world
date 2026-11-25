@@ -5,7 +5,8 @@
 // footprint gedung tetap 8.2 sebagai penghalang, jarak minimum, bebek
 // hanya di kolam); label + putaran tersimpan (store + mesh 3D); hewan
 // Builder tetap dalam radius jelajah; muat simpanan lama (tanpa label /
-// tanpa rotY); entri minimap; draw call dasar tidak berubah (363).
+// tanpa rotY); entri minimap; draw call dasar tidak berubah (364 —
+// 9.2: +1 main karena antena menara distrik kini ter-render).
 // Bukan uji UI/browser; tampilan visual diverifikasi live oleh parent.
 import * as THREE from 'three';
 import { buildCity } from '../src/world/buildings/city.ts';
@@ -392,14 +393,14 @@ console.log('== 8.3: draw call dasar ==');
 const replicaNoAnimals = buildReplicaScene(false);
 const mainNoAnimals = countMain(replicaNoAnimals, overviewCamera(16 / 9));
 const shadowNoAnimals = countShadow(replicaNoAnimals, shadowCamera());
-check('main tanpa hewan tetap 231 (katalog saja tidak menambah mesh dasar)', mainNoAnimals.total === 231, `dapat ${mainNoAnimals.total}`);
+check('main tanpa hewan tetap 232 (katalog saja tidak menambah mesh dasar)', mainNoAnimals.total === 232, `dapat ${mainNoAnimals.total}`);
 check('shadow tanpa hewan tetap 121 (9.1: frustum bayangan ±50)', shadowNoAnimals.total === 121, `dapat ${shadowNoAnimals.total}`);
 const replica = buildReplicaScene(true);
 const main = countMain(replica, overviewCamera(16 / 9));
 const shadow = countShadow(replica, shadowCamera());
-check('main dengan hewan tetap 242', main.total === 242, `dapat ${main.total}`);
+check('main dengan hewan tetap 243', main.total === 243, `dapat ${main.total}`);
 check('shadow dengan hewan tetap 121 (9.1: frustum bayangan ±50)', shadow.total === 121, `dapat ${shadow.total}`);
-check('HUD total tetap 242 + 121 = 363', main.total + shadow.total === 363);
+check('HUD total tetap 243 + 121 = 364', main.total + shadow.total === 364);
 
 console.log(`\nHasil: ${passed} lulus, ${failed} gagal`);
 if (failed > 0) process.exit(1);

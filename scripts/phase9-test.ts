@@ -83,16 +83,20 @@ check('kaca biru muda (0x7dd3fc)', HQ_TOWER_SPEC.glassColor === 0x7dd3fc);
 
 // ---------- 4. Kamera Overview baru ----------
 console.log('== 9: kamera Overview ==');
-check('home (0, 55, 75)', OVERVIEW_POS.x === 0 && OVERVIEW_POS.y === 55 && OVERVIEW_POS.z === 75);
+check('home (0, 63.8, 84.8) — 9.2', OVERVIEW_POS.x === 0 && OVERVIEW_POS.y === 63.8 && OVERVIEW_POS.z === 84.8);
 check(
-  'elevasi ~42° (lebih curam dari ~28° lama)',
-  Math.atan2(OVERVIEW_POS.y - OVERVIEW_TARGET.y, OVERVIEW_POS.z - OVERVIEW_TARGET.z) * (180 / Math.PI) > 40,
+  'elevasi ~39° (9.2: sedikit lebih landai dari 42° agar puncak menara masuk frame)',
+  (() => {
+    const e =
+      Math.atan2(OVERVIEW_POS.y - OVERVIEW_TARGET.y, OVERVIEW_POS.z - OVERVIEW_TARGET.z) * (180 / Math.PI);
+    return e >= 38.5 && e <= 40;
+  })(),
 );
 check(
-  'jarak home ke target < maxDistance 95 (tidak dijepit OrbitControls)',
-  Math.hypot(OVERVIEW_POS.y - OVERVIEW_TARGET.y, OVERVIEW_POS.z) < 95,
+  'jarak home ke target < maxDistance 110 (tidak dijepit OrbitControls)',
+  Math.hypot(OVERVIEW_POS.y - OVERVIEW_TARGET.y, OVERVIEW_POS.z) < 110,
 );
-check('target (0, 0.8, 15)', OVERVIEW_TARGET.x === 0 && OVERVIEW_TARGET.y === 0.8 && OVERVIEW_TARGET.z === 15);
+check('target (0, 7, 15) — 9.2', OVERVIEW_TARGET.x === 0 && OVERVIEW_TARGET.y === 7 && OVERVIEW_TARGET.z === 15);
 
 // ---------- 5. Suasana hangat ----------
 console.log('== 9: suasana hangat ==');

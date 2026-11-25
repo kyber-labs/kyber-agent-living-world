@@ -144,12 +144,10 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.minDistance = 4;
-  // Phase 9: 95 (dulu 60) — home Overview baru berjarak ~81 dari target;
-  // tanpa ini OrbitControls.update() menjepit kamera kembali ke 60 dan
-  // sudut curam akan memotong deret rumah selatan (bug yang sama seperti
-  // yang diperbaiki 3.2). Pengguna juga bisa zoom-out lebih jauh untuk
-  // melihat seluruh pulau.
-  controls.maxDistance = 95;
+  // Phase 9.2: 110 (dulu 95) — home Overview baru berjarak ~90 dari target;
+  // tanpa ini OrbitControls.update() menjepit kamera dan pengguna hampir
+  // tidak bisa zoom-out dari home baru (sisa headroom hanya ~5).
+  controls.maxDistance = 110;
   controls.maxPolarAngle = Math.PI / 2 - 0.05;
   controls.update();
 
