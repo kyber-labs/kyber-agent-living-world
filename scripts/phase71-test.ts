@@ -11,15 +11,14 @@
 // live: aspek kamera/posisi agent — Monte Carlo 20 seed: 261–291).
 // Bukan uji UI/browser; FPS live tidak diuji di sini.
 //
-// PEMBARUAN 8.2 (23 Nov 2026): geometri kota bertambah (masjid, sekolah,
-// klinik, toko, lapak pasar, menara kaca, kolam, taman bermain, halte,
-// mobil — 44 mesh baru) sehingga angka yang dikunci berubah: naive 47
-// -> 91, main 192 -> 236, shadow 99 -> 116, total 291 -> 352 (tanpa
-// hewan; hewan 8.2 menambah 11 main + 0 shadow -> total live 363,
-// lihat scripts/phase82-test.ts). Angka-angka di bawah dihitung ulang
-// dengan cara yang sama persis seperti 7.1 (replika scene graph +
-// matematika frustum), BUKAN dengan menghapus asersi. Rincian baru ada
-// di docs/PHASES.md §8.2.
+// PEMBARUAN 9.1 (25 Nov 2026): kamera Overview digeser ke selatan
+// (0,55,60) -> (0,55,75) + target (0,0.8,0) -> (0,0.8,15) supaya
+// seluruh pulau masuk frame; laut +1 mesh tanah; frustum bayangan
+// ±30 -> ±50 (far 80 -> 120) supaya seluruh pulau berbayang.
+// Angka yang dikunci berubah: main TETAP 231 (laut +1, satu mesh kota
+// ter-cull dari posisi kamera baru), shadow 109 -> 121, total
+// 340 -> 352 (dengan hewan 351 -> 363, lihat phase82-test.ts).
+// Rincian baru ada di docs/PHASES.md §9.1.
 import * as THREE from 'three';
 import {
   buildReplicaScene,
@@ -76,7 +75,8 @@ city.group.traverse((o) => {
   if (isRenderable(o)) naiveCity += 1;
 });
 check('hitungan naive Phase 9: kota = 90 mesh (46 lama + 44 baru 8.2)', naiveCity === 90, `dapat ${naiveCity}`);
-check('hitungan naive Phase 9: 90 + 24 room + 4 tanah = 118', naiveCity + 24 + 4 === 118);
+// 9.1: tanah 4 -> 5 (laut +1).
+check('hitungan naive 9.1: 90 + 24 room + 5 tanah = 119', naiveCity + 24 + 5 === 119);
 
 // Pra-instancing naive: marka 36 + pohon 38 + rumah 30 menggantikan
 // InstancedMesh (marka 2 + pohon 2 + rumah 7).
@@ -84,40 +84,40 @@ const dashCoords: number[] = [];
 for (let c = -40; c <= 40; c += 4) if (Math.abs(c) >= 8) dashCoords.push(c);
 check('pra-instancing: marka jalan 36 mesh (18 per arah)', dashCoords.length === 18);
 check(
-  'pra-instancing naive: kota 183, total 211',
+  'pra-instancing naive: kota 183, total 212',
   naiveCity + (dashCoords.length * 2 - 2) + (19 * 2 - 2) + (10 * 3 - 7) === 183 &&
-    naiveCity + (dashCoords.length * 2 - 2) + (19 * 2 - 2) + (10 * 3 - 7) + 24 + 4 === 211,
+    naiveCity + (dashCoords.length * 2 - 2) + (19 * 2 - 2) + (10 * 3 - 7) + 24 + 5 === 212,
 );
 
 // ---------- 2. Main pass yang benar (grup material dihitung) ----------
 const main = countMain(replica, overviewCamera(16 / 9));
 check('main pass Overview 16:9 = 231 draw call', main.total === 231, `dapat ${main.total}`);
 check(
-  'main pass rincian: kota 90, meeting 24, builder 7, agent 106, tanah 4',
-  main.byTag['kota'] === 90 &&
+  'main pass rincian: kota 89, meeting 24, builder 7, agent 106, tanah 5',
+  main.byTag['kota'] === 89 &&
     main.byTag['ruang meeting'] === 24 &&
     main.byTag['builder'] === 7 &&
     main.byTag['agent'] === 106 &&
-    main.byTag['tanah/grid/plaza'] === 4,
+    main.byTag['tanah/grid/plaza'] === 5,
   JSON.stringify(main.byTag),
 );
 const mainNarrow = countMain(replica, overviewCamera(1.0));
-check('main pass aspek 1,0 = 224 (7 mesh ter-cull)', mainNarrow.total === 224, `dapat ${mainNarrow.total}`);
+check('main pass aspek 1,0 = 225 (6 mesh ter-cull)', mainNarrow.total === 225, `dapat ${mainNarrow.total}`);
 
 // ---------- 3. Shadow pass (yang dilupakan hitungan Phase 7) ----------
 const shadow = countShadow(replica, shadowCamera());
-check('shadow pass = 109 draw call', shadow.total === 109, `dapat ${shadow.total}`);
+check('shadow pass = 121 draw call', shadow.total === 121, `dapat ${shadow.total}`);
 check(
-  'shadow pass rincian: kota 40, meeting 6, builder 3, agent 60',
-  shadow.byTag['kota'] === 40 &&
+  'shadow pass rincian: kota 52, meeting 6, builder 3, agent 60',
+  shadow.byTag['kota'] === 52 &&
     shadow.byTag['ruang meeting'] === 6 &&
     shadow.byTag['builder'] === 3 &&
     shadow.byTag['agent'] === 60,
   JSON.stringify(shadow.byTag),
 );
 check(
-  'HUD total tanpa hewan = main + shadow = 340 (live +11 hewan = 351, lihat phase82)',
-  main.total + shadow.total === 340,
+  'HUD total tanpa hewan = main + shadow = 352 (live +11 hewan = 363, lihat phase82)',
+  main.total + shadow.total === 352,
 );
 check(
   'shadow pass nyata (>0) — HUD menghitung main + shadow, bukan main saja',
@@ -148,7 +148,7 @@ for (const [x, z, s] of treeSpots) {
   if (shFrustum.intersectsObject(trunk)) treeShadowPre += 1;
   if (shFrustum.intersectsObject(foliage)) treeShadowPre += 1;
 }
-check('pohon pra-instancing di shadow pass: 20/38 (9 pohon tepi di luar)', treeShadowPre === 20, `dapat ${treeShadowPre}`);
+check('pohon pra-instancing di shadow pass: 38/38 (semua pohon kini di dalam frustum ±50)', treeShadowPre === 38, `dapat ${treeShadowPre}`);
 let houseShadowPre = 0;
 for (const x of [-20, -10, 0, 10, 20]) {
   for (const z of [18, 27]) {
@@ -164,14 +164,14 @@ for (const x of [-20, -10, 0, 10, 20]) {
     if (shFrustum.intersectsObject(roof)) houseShadowPre += 1;
   }
 }
-check('rumah pra-instancing di shadow pass: 19/20', houseShadowPre === 19, `dapat ${houseShadowPre}`);
+check('rumah pra-instancing di shadow pass: 20/20', houseShadowPre === 20, `dapat ${houseShadowPre}`);
 const shadowPre = shadow.total - 2 - 6 + treeShadowPre + houseShadowPre; // ganti instanced pohon+rumah
-check('shadow pass pra-instancing = 140', shadowPre === 140, `dapat ${shadowPre}`);
+check('shadow pass pra-instancing = 171', shadowPre === 171, `dapat ${shadowPre}`);
 const mainPre = main.total + 34 + 36 + 23; // marka + pohon + rumah individual
 check('main pass pra-instancing = 324', mainPre === 324, `dapat ${mainPre}`);
 check(
-  'penghematan benar: total 464 -> 340 = -124 (-26,7% ~ -27%), bukan -34%',
-  mainPre + shadowPre === 464 && main.total + shadow.total === 340 && mainPre + shadowPre - (main.total + shadow.total) === 124,
+  'penghematan benar: total 495 -> 352 = -143 (-28,9% ~ -29%), bukan -34%',
+  mainPre + shadowPre === 495 && main.total + shadow.total === 352 && mainPre + shadowPre - (main.total + shadow.total) === 143,
 );
 
 console.log(`\nHasil: ${passed} lulus, ${failed} gagal`);

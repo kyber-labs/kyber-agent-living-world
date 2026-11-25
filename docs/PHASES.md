@@ -1174,12 +1174,20 @@ tanpa GPU.
   konsep tidak direproduksi; nav graph, meeting, tugas/chat/Kanban,
   logika Builder, Supabase, env var, "mode eksekusi nyata", teks fase
   tidak disentuh.
-- Batas jujur: dari home baru yang curam, tepi selatan pulau (rumput
-  terluar) terpotong di bawah frame pada aspek 16:9 — semua gedung +
-  deret rumah selatan tetap masuk frame; pengguna bisa zoom-out
-  (maxDistance 95) untuk melihat seluruh pulau. Langit lukis berawan
-  di gambar konsep tidak bisa direproduksi — langit kode tetap warna
-  datar + kabut, hanya paletnya yang dihangatkan.
+- Batas jujur (diperbaiki 9.1, lihat §9.1): dari home baru yang curam, tepi selatan pulau (rumput terluar) terpotong di bawah frame pada aspek 16:9 — verifikasi live 25 Nov 06:40 mengukur ~15% dan membantah klaim "zoom-out menampilkan seluruh pulau" (zoom-out mentok pun belum penuh). Langit lukis berawan di gambar konsep tidak bisa direproduksi — langit kode tetap warna datar + kabut, hanya paletnya yang dihangatkan.
+
+## Phase 9.1 — Mendekati gambar konsep (laut + bingkai penuh + senja + pencahayaan) ✅ SELESAI (25 Nov 2026)
+- Latar: verifikasi live Phase 9 (25 Nov 06:40) LULUS SEBAGIAN — visual utama cocok konsep, tapi Bos menilai hasil live belum seperti gambar konsep ("pingin seperti ini kyk 3D gitu"). Temuan: tepi selatan terpotong ~15% di Overview 16:9 (dan zoom-out mentok pun belum menampilkan cincin pasir selatan penuh — klaim §9 "zoom-out menampilkan seluruh pulau" TERBANTAH live), senja hanya ~1–2 menit, pencahayaan datar, TANPA laut. Bos memerintahkan Eksekusi 9.1 (5 item).
+- Perubahan (9 file diubah, 1 baru):
+  - `src/world/engine/createWorld.ts` — LAUT: cakram air biru `CircleGeometry(200, 64)` warna 0x2e7fa8 di y -0,05 (di bawah tanah y 0, tanpa z-fighting), roughness 0,6, transparan opacity 0,95 ± denyut 0,04 periode 40 dtk; radius 200 > fog far 180 sehingga tepi memudar ke kabut seperti cakrawala konsep. 1 mesh, tanpa bayangan. Spesifikasi diekspor sebagai `SEA_SPEC` (dipakai uji phase91). Komentar lama "TANPA laut" diperbarui. Frustum bayangan matahari ±30 → ±50, far 80 → 120: dulu bangunan tepi pulau (rumah selatan z~36–40, masjid (-36,33)) berada di luar frustum sehingga tidak berbayang; kini seluruh pulau berbayang.
+  - `src/world/camera/CameraDirector.ts` — home Overview (0,55,60) → (0,55,75), target (0,0.8,0) → (0,0.8,15): rig kamera digeser murni ke selatan +15; arah pandang, elevasi ~42°, dan jarak home ~81 TETAP. Dihitung dari proyeksi nyata (FOV 48°, aspek 16:9, proyeksi three.js di phase91-test): titik terjauh pulau (lingkaran r 48,5) max |NDC| 1,64 → 0,92 di home (selatan -0,92, utara +0,73, timur 0,66), 0,73 saat zoom-out mentok. `maxDistance` TETAP 95. Harga: pusat pulau kini di NDC y +0,23 (sedikit di atas tengah — seperti gambar konsep, laut jadi latar depan bawah); tepi utara sedikit lebih berkabut (jarak kamera–tepi utara 121 → 135).
+  - `src/simulation/lifeSim.ts` — jendela Sore 15:00–18:00 → 14:00–19:00 (3 jam → 5 jam simulasi, ~75 → ~125 detik nyata); kecepatan jam TIDAK berubah (1 hari = 10 menit), siklus siang–malam tetap berjalan, jam awal tetap 15:00.
+  - `src/simulation/environment.ts` — cahaya lebih hangat + tegas: matahari Siang 1,9 → 2,2 + warna 0xfff3d6 → 0xffe9b0 (lebih kuning emas), Pagi 1,6 → 1,8; cahaya isi (hemisphere) ditekan Siang 1,0 → 0,85, Pagi 0,9 → 0,8, Sore 0,65 → 0,55 supaya bayangan arah terbaca; Sore 1,1 dan Malam tetap.
+  - Label fase → "Phase 9 — Kampung Senja": `src/App.tsx` (badge header), `src/ui/Hud.tsx` (footer "Fase 9/7 — Kampung Senja"), `src/ui/SettingsPanel.tsx` (panel Atur).
+  - `scripts/phase91-test.ts` (BARU, 28 assertion) + `scripts/sceneCount.ts` (kamera replika kini membaca OVERVIEW_POS/OVERVIEW_TARGET langsung dari CameraDirector — satu sumber kebenaran; frustum bayangan replika ±50/far 120; laut +1 mesh) + `scripts/run-all-tests.sh` (suite phase91 didaftarkan).
+- Draw call (replika cara 7.1): main TETAP 231 (laut +1, satu mesh kota ter-cull dari posisi kamera baru — ujung antena menara kaca distrik (36,22,-34), detail tipis di sudut timur laut, kini tepat di luar tepi atas frame), shadow 109 → 121 (+12: frustum ±50 kini mencakup pohon + rumah tepi yang dulu di luar), total HUD 340 → 352 (dengan hewan 351 → 363). Penghematan instancing yang benar -143 (495 → 352, -28,9% ~ -29%). Uji yang ikut diperbarui angkanya (bukan perilaku): phase71 (tanah 4→5, kota main 90→89, shadow 109→121, pra-instancing shadow 140→171), phase82 (total 351→363, intensitas Siang 1,9→2,2), phase9 (home/target baru, matahari Siang 0xfff3d6→0xffe9b0, rumus elevasi memakai jarak horizontal target).
+- Yang SENGAJA tidak dilakukan (di luar lingkup 9.1): menara dari depan (kedalaman menara), atap panggung Hiburan/balok ungu, mode Atas (TOP_POS (0,44,0.01) tetap), awan lukis, detail super-padat, Supabase, Gemini/LLM, dependency baru.
+- Batas jujur: pada aspek yang lebih sempit dari 16:9 (mis. 1:1), tepi timur/barat pulau tetap terpotong — itu geometri viewport, bukan cacat framing; framing 9.1 dijamin untuk 16:9 (home + zoom-out mentok). Awan lukis dan detail super-padat gambar konsep tetap tidak bisa direproduksi — hasil akhir tetap low-poly real-time, hanya komposisi/warna/kedalamannya yang lebih dekat.
 
 ## Backlog akhir (transparan — belum ada, jangan diklaim berfungsi)
 - Sinkronisasi meeting ke Supabase (tabel belum ada — butuh migrasi baru

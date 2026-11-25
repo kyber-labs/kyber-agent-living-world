@@ -244,22 +244,22 @@ const replicaNoAnimals = buildReplicaScene(false);
 const mainNoAnimals = countMain(replicaNoAnimals, overviewCamera(16 / 9));
 const shadowNoAnimals = countShadow(replicaNoAnimals, shadowCamera());
 check('main tanpa hewan = 231 (konsisten dengan phase71)', mainNoAnimals.total === 231, `dapat ${mainNoAnimals.total}`);
-check('shadow tanpa hewan = 109 (konsisten dengan phase71)', shadowNoAnimals.total === 109, `dapat ${shadowNoAnimals.total}`);
+check('shadow tanpa hewan = 121 (konsisten dengan phase71)', shadowNoAnimals.total === 121, `dapat ${shadowNoAnimals.total}`);
 const replica = buildReplicaScene(true);
 const main = countMain(replica, overviewCamera(16 / 9));
 const shadow = countShadow(replica, shadowCamera());
 check('main dengan hewan = 242 (231 + 11 hewan)', main.total === 242, `dapat ${main.total}`);
 check('hewan di main pass = 11', (main.byTag['hewan'] ?? 0) === 11, JSON.stringify(main.byTag));
-check('shadow dengan hewan = 109 (hewan tanpa bayangan)', shadow.total === 109, `dapat ${shadow.total}`);
+check('shadow dengan hewan = 121 (hewan tanpa bayangan)', shadow.total === 121, `dapat ${shadow.total}`);
 check('hewan di shadow pass = 0', (shadow.byTag['hewan'] ?? 0) === 0, JSON.stringify(shadow.byTag));
-check('HUD total baru = 242 + 109 = 351', main.total + shadow.total === 351);
+check('HUD total baru = 242 + 121 = 363', main.total + shadow.total === 363);
 
 // ---------- 5. Suasana senja ----------
 console.log('== 8.2: suasana senja ==');
 const sore = environmentTargets('sore', 'cerah');
 check('langit Sore jingga hangat (0xe8894f)', sore.sky.getHex() === 0xe8894f, `dapat 0x${sore.sky.getHex().toString(16)}`);
 check('matahari Sore hangat (0xff9e4a)', sore.sunColor.getHex() === 0xff9e4a, `dapat 0x${sore.sunColor.getHex().toString(16)}`);
-check('intensitas Sore (1,1) lebih redup dari Siang (1,9)', sore.sunIntensity === 1.1 && environmentTargets('siang', 'cerah').sunIntensity === 1.9);
+check('intensitas Sore (1,1) lebih redup dari Siang (2,2)', sore.sunIntensity === 1.1 && environmentTargets('siang', 'cerah').sunIntensity === 2.2);
 check('matahari Sore rendah (y=10) di barat (x=30)', sore.sunPos.y === 10 && sore.sunPos.x === 30, `dapat (${sore.sunPos.x},${sore.sunPos.y},${sore.sunPos.z})`);
 check('matahari Pagi/Siang tetap tinggi (y>=30)', environmentTargets('pagi', 'cerah').sunPos.y >= 30 && environmentTargets('siang', 'cerah').sunPos.y >= 30);
 // Phase 9: langit Siang dihangatkan (0x9ecfec -> 0xbcd9e6); Malam tetap.

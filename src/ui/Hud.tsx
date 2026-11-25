@@ -32,7 +32,7 @@ export function Hud({ agents, liveStates, dbConfigured, engineMode, tasks, env, 
           : 'Jam: —'}
       </span>
       <span>{perf ? `${perf.fps} FPS · ${perf.drawCalls} draw` : 'FPS: —'}</span>
-      <span>Fase 8.2/7 — Dunia Lebih Kaya</span>
+      <span>Fase 9/7 — Kampung Senja</span>
       <span>Database: {dbConfigured ? 'terhubung' : 'belum dikonfigurasi'}</span>
     </footer>
   );

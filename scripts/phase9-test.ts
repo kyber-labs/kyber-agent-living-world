@@ -83,21 +83,21 @@ check('kaca biru muda (0x7dd3fc)', HQ_TOWER_SPEC.glassColor === 0x7dd3fc);
 
 // ---------- 4. Kamera Overview baru ----------
 console.log('== 9: kamera Overview ==');
-check('home (0, 55, 60)', OVERVIEW_POS.x === 0 && OVERVIEW_POS.y === 55 && OVERVIEW_POS.z === 60);
+check('home (0, 55, 75)', OVERVIEW_POS.x === 0 && OVERVIEW_POS.y === 55 && OVERVIEW_POS.z === 75);
 check(
   'elevasi ~42° (lebih curam dari ~28° lama)',
-  Math.atan2(OVERVIEW_POS.y - OVERVIEW_TARGET.y, OVERVIEW_POS.z) * (180 / Math.PI) > 40,
+  Math.atan2(OVERVIEW_POS.y - OVERVIEW_TARGET.y, OVERVIEW_POS.z - OVERVIEW_TARGET.z) * (180 / Math.PI) > 40,
 );
 check(
   'jarak home ke target < maxDistance 95 (tidak dijepit OrbitControls)',
   Math.hypot(OVERVIEW_POS.y - OVERVIEW_TARGET.y, OVERVIEW_POS.z) < 95,
 );
-check('target tetap (0, 0.8, 0)', OVERVIEW_TARGET.x === 0 && OVERVIEW_TARGET.y === 0.8 && OVERVIEW_TARGET.z === 0);
+check('target (0, 0.8, 15)', OVERVIEW_TARGET.x === 0 && OVERVIEW_TARGET.y === 0.8 && OVERVIEW_TARGET.z === 15);
 
 // ---------- 5. Suasana hangat ----------
 console.log('== 9: suasana hangat ==');
 check('langit Siang dihangatkan (0xbcd9e6)', environmentTargets('siang', 'cerah').sky.getHex() === 0xbcd9e6);
-check('matahari Siang putih hangat (0xfff3d6)', environmentTargets('siang', 'cerah').sunColor.getHex() === 0xfff3d6);
+check('matahari Siang lebih kuning emas 9.1 (0xffe9b0)', environmentTargets('siang', 'cerah').sunColor.getHex() === 0xffe9b0);
 check('langit Pagi dihangatkan (0xccd9e4)', environmentTargets('pagi', 'cerah').sky.getHex() === 0xccd9e4);
 check('langit Sore tetap jingga (0xe8894f)', environmentTargets('sore', 'cerah').sky.getHex() === 0xe8894f);
 check('langit Malam tetap (0x232f45)', environmentTargets('malam', 'cerah').sky.getHex() === 0x232f45);

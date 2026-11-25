@@ -12,6 +12,8 @@ import { AgentCharacter } from '../src/world/characters/AgentCharacter.ts';
 import { Animals } from '../src/world/animals/Animals.ts';
 import { MEETING_ROOMS } from '../src/types/meeting.ts';
 import { AGENTS } from '../src/config/agents.ts';
+import { OVERVIEW_POS, OVERVIEW_TARGET } from '../src/world/camera/CameraDirector.ts';
+import { SEA_SPEC } from '../src/world/engine/createWorld.ts';
 
 export interface ReplicaScene {
   scene: THREE.Scene;
@@ -46,6 +48,15 @@ export function buildReplicaScene(withAnimals = false): ReplicaScene {
   sandRim.position.y = 0.005;
   sandRim.receiveShadow = true;
   scene.add(sandRim);
+
+  // 9.1: laut — seperti createWorld (1 mesh, tanpa bayangan).
+  const sea = new THREE.Mesh(
+    new THREE.CircleGeometry(SEA_SPEC.radius, 64),
+    new THREE.MeshStandardMaterial({ color: SEA_SPEC.color, roughness: 0.6, transparent: true, opacity: SEA_SPEC.opacityBase }),
+  );
+  sea.rotation.x = -Math.PI / 2;
+  sea.position.y = SEA_SPEC.y;
+  scene.add(sea);
 
   const grid = new THREE.GridHelper(90, 45, 0x7d8a99, 0xb9c4cf);
   grid.position.y = 0.01;
@@ -158,14 +169,17 @@ export function countShadow(replica: ReplicaScene, shadowCam: THREE.Camera): { t
 
 export function overviewCamera(aspect: number): THREE.PerspectiveCamera {
   const cam = new THREE.PerspectiveCamera(48, aspect, 0.1, 300);
-  cam.position.set(0, 55, 60); // Phase 9: OVERVIEW_POS Overview (dulu (0,40,75)).
-  cam.lookAt(0, 0.8, 0);
+  // 9.1: SATU sumber kebenaran — posisi/target dibaca dari CameraDirector
+  // (dulu hardcode (0,55,60)/(0,0.8,0) di sini, pelajaran 3.2).
+  cam.position.copy(OVERVIEW_POS);
+  cam.lookAt(OVERVIEW_TARGET);
   cam.updateMatrixWorld(true);
   return cam;
 }
 
 export function shadowCamera(): THREE.OrthographicCamera {
-  const cam = new THREE.OrthographicCamera(-30, 30, 30, -30, 1, 80);
+  // 9.1: ±50, far 120 — sama seperti matahari di createWorld.
+  const cam = new THREE.OrthographicCamera(-50, 50, 50, -50, 1, 120);
   cam.position.set(20, 30, 10); // posisi matahari
   cam.lookAt(0, 0, 0);
   cam.updateMatrixWorld(true);

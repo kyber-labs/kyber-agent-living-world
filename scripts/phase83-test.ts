@@ -393,13 +393,13 @@ const replicaNoAnimals = buildReplicaScene(false);
 const mainNoAnimals = countMain(replicaNoAnimals, overviewCamera(16 / 9));
 const shadowNoAnimals = countShadow(replicaNoAnimals, shadowCamera());
 check('main tanpa hewan tetap 231 (katalog saja tidak menambah mesh dasar)', mainNoAnimals.total === 231, `dapat ${mainNoAnimals.total}`);
-check('shadow tanpa hewan tetap 109', shadowNoAnimals.total === 109, `dapat ${shadowNoAnimals.total}`);
+check('shadow tanpa hewan tetap 121 (9.1: frustum bayangan ±50)', shadowNoAnimals.total === 121, `dapat ${shadowNoAnimals.total}`);
 const replica = buildReplicaScene(true);
 const main = countMain(replica, overviewCamera(16 / 9));
 const shadow = countShadow(replica, shadowCamera());
 check('main dengan hewan tetap 242', main.total === 242, `dapat ${main.total}`);
-check('shadow dengan hewan tetap 109', shadow.total === 109, `dapat ${shadow.total}`);
-check('HUD total tetap 242 + 109 = 351', main.total + shadow.total === 351);
+check('shadow dengan hewan tetap 121 (9.1: frustum bayangan ±50)', shadow.total === 121, `dapat ${shadow.total}`);
+check('HUD total tetap 242 + 121 = 363', main.total + shadow.total === 363);
 
 console.log(`\nHasil: ${passed} lulus, ${failed} gagal`);
 if (failed > 0) process.exit(1);

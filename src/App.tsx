@@ -532,7 +532,7 @@ function App() {
             <span className="live-dot" />
             LIVE
           </span>
-          <span className="phase-badge">Phase 8.2 — Dunia Lebih Kaya</span>
+          <span className="phase-badge">Phase 9 — Kampung Senja</span>
         </div>
         <div className="header-status">
           <span>

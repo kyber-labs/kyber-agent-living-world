@@ -24,27 +24,31 @@ export interface EnvTargets {
 
 export function environmentTargets(period: DayPeriod, weather: WeatherKind): EnvTargets {
   // Phase 9: langit Pagi/Siang dihangatkan (dulu 0xbfd9f2/0x9ecfec yang
-  // dingin) + matahari Siang putih hangat — nuansa golden hour terasa
-  // di sebagian besar waktu. Sore (senja) dan Malam tidak berubah.
+  // dingin) — nuansa golden hour terasa di sebagian besar waktu.
+  // 9.1: cahaya lebih hangat + bayangan lebih tegas (dulu Siang 1,9 /
+  // hemi 1,0 dan Pagi 1,6 / 0,9 — cahaya isi terlalu kuat sehingga
+  // bayangan arah nyaris tidak terbaca; matahari Siang 0xfff3d6 ->
+  // 0xffe9b0, lebih kuning emas). Sore tetap 1,1 (diperiksa
+  // phase82-test); Malam tetap.
   let sky = 0xccd9e4;
   let sun = 0xfff2dd;
-  let sunIntensity = 1.6;
-  let hemiIntensity = 0.9;
+  let sunIntensity = 1.8;
+  let hemiIntensity = 0.8;
   let fogNear = 90;
   let fogFar = 180;
   let sunPos = new THREE.Vector3(20, 30, 10);
   if (period === 'siang') {
     sky = 0xbcd9e6;
-    sun = 0xfff3d6;
-    sunIntensity = 1.9;
-    hemiIntensity = 1.0;
+    sun = 0xffe9b0;
+    sunIntensity = 2.2;
+    hemiIntensity = 0.85;
     sunPos = new THREE.Vector3(15, 35, 10);
   } else if (period === 'sore') {
     // Senja: langit jingga, matahari rendah dan hangat, cahaya melemah.
     sky = 0xe8894f;
     sun = 0xff9e4a;
     sunIntensity = 1.1;
-    hemiIntensity = 0.65;
+    hemiIntensity = 0.55;
     fogNear = 78;
     fogFar = 165;
     sunPos = new THREE.Vector3(30, 10, 15);

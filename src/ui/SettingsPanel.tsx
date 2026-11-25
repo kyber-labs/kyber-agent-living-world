@@ -58,7 +58,7 @@ export function SettingsPanel({
       <div className="settings-about">
         <div className="detail-row">
           <span>Versi</span>
-          <strong>Phase 8.2 — Dunia Lebih Kaya</strong>
+          <strong>Phase 9 — Kampung Senja</strong>
         </div>
         <div className="detail-row">
           <span>AI Engine</span>

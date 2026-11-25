@@ -58,12 +58,16 @@ export const MINUTES_PER_REAL_SECOND = 1440 / DAY_LENGTH_SECONDS;
 const STORAGE_KEY = 'living-world-life-v1';
 const DEFAULT_VITALS: Vitals = { energy: 85, focus: 80, mood: 78 };
 
-/** Periode hari dari menit (05:00 pagi, 11:00 siang, 15:00 sore, 18:00 malam). */
+/** Periode hari dari menit (05:00 pagi, 11:00 siang, 14:00 sore, 19:00 malam).
+ *  9.1: jendela Sore diperlebar 15:00–18:00 -> 14:00–19:00 (3 jam ->
+ *  5 jam simulasi, ~75 -> ~125 detik nyata) supaya senja golden hour
+ *  seperti gambar konsep bertahan lebih lama; kecepatan jam (1 hari =
+ *  10 menit) TIDAK berubah dan siklus siang–malam tetap berjalan. */
 export function periodOf(minutes: number): DayPeriod {
   const m = ((Math.floor(minutes) % 1440) + 1440) % 1440;
   if (m >= 300 && m < 660) return 'pagi';
-  if (m >= 660 && m < 900) return 'siang';
-  if (m >= 900 && m < 1080) return 'sore';
+  if (m >= 660 && m < 840) return 'siang';
+  if (m >= 840 && m < 1140) return 'sore';
   return 'malam';
 }
 

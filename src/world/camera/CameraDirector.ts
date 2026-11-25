@@ -24,8 +24,8 @@ export interface DirectorOptions {
   getFirstAgentId: () => string | null;
 }
 
-export const OVERVIEW_POS = new THREE.Vector3(0, 55, 60); // Phase 9: home Overview lebih isometrik (curam, seperti diorama) — elevasi ~42° (dulu ~28° di (0,40,75) sejak 3.2). Diekspor supaya createWorld memakai SATU sumber kebenaran yang sama (pelajaran 3.2: CAMERA_HOME dan OVERVIEW_POS harus selalu sama).
-export const OVERVIEW_TARGET = new THREE.Vector3(0, 0.8, 0);
+export const OVERVIEW_POS = new THREE.Vector3(0, 55, 75); // 9.1: rig kamera digeser murni ke selatan +15 (dulu (0,55,60)) — arah pandang, elevasi ~42°, dan jarak home ~81 TETAP sama; yang berubah hanya target ikut ke selatan supaya tepi selatan pulau masuk frame. Dihitung dari proyeksi nyata (FOV 48°, aspek 16:9): titik terjauh pulau (lingkaran r 48,5) max |NDC| 1,64 -> 0,92 di home, 0,73 saat zoom-out mentok (maxDistance 95 TETAP). Harga: pusat pulau kini di NDC y +0,23 (sedikit di atas tengah frame — seperti gambar konsep, laut jadi latar depan bawah) dan tepi utara sedikit lebih berkabut.
+export const OVERVIEW_TARGET = new THREE.Vector3(0, 0.8, 15);
 const TOP_POS = new THREE.Vector3(0, 44, 0.01);
 const TOP_TARGET = new THREE.Vector3(0, 0, 0);
 const EYE_HEIGHT = 1.7;

@@ -92,6 +92,22 @@ export interface PerfStats {
   drawCalls: number;
 }
 
+/**
+ * 9.1: spesifikasi laut — dipakai createWorld + uji phase91. Radius 200
+ * (melewati fog far 180 supaya tepi memudar ke kabut), y -0,05 (di bawah
+ * tanah y 0, tanpa z-fighting), biru laut 0x2e7fa8 yang cocok dengan
+ * senja konsep. Denyut opacity sangat pelan (periode 40 dtk, amplitudo
+ * 0,04) — gerakan halus saja, tanpa geometri ombak.
+ */
+export const SEA_SPEC = {
+  radius: 200,
+  y: -0.05,
+  color: 0x2e7fa8,
+  opacityBase: 0.95,
+  opacityAmp: 0.04,
+  pulsePeriodSeconds: 40,
+} as const;
+
 export function createWorld(container: HTMLDivElement, options: WorldOptions): WorldHandle {
   const { agents, onSelectAgent } = options;
   const clock = createWorldClock();
@@ -146,12 +162,18 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   sun.position.set(20, 30, 10);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -30;
-  sun.shadow.camera.right = 30;
-  sun.shadow.camera.top = 30;
-  sun.shadow.camera.bottom = -30;
+  // 9.1: frustum bayangan diperlebar ±30 -> ±50 (dulu bangunan di tepi
+  // pulau — rumah selatan z~36-40, masjid (-36,33) — berada di luar
+  // frustum sehingga tidak melempar/menerima bayangan; kini seluruh
+  // pulau berbayang) + far 80 -> 120 (tepi terjauh dari matahari sore
+  // ~86 unit). Harga: shadow pass naik (lihat phase71-test) — itulah
+  // biaya "bayangan lebih tegas" di seluruh pulau.
+  sun.shadow.camera.left = -50;
+  sun.shadow.camera.right = 50;
+  sun.shadow.camera.top = 50;
+  sun.shadow.camera.bottom = -50;
   sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 80;
+  sun.shadow.camera.far = 120;
   sun.shadow.bias = -0.0005;
   scene.add(sun);
 
@@ -165,9 +187,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   scene.add(ground);
 
   // Phase 9: cincin pasir di tepi pulau (r 45–48,5) — pulau kampung
-  // bertepi pantai seperti gambar konsep. TANPA laut di sekelilingnya
-  // (lisensi artistik gambar konsep, bukan bagian rencana): di luar
-  // cincin, tanah memudar ke kabut seperti sebelumnya.
+  // bertepi pantai seperti gambar konsep. 9.1: laut di sekelilingnya
+  // kini ADA (lihat `sea` di bawah) — lisensi artistik Phase 9 dicabut
+  // atas perintah Bos; di luar cincin, laut memudar ke kabut.
   const sandRim = new THREE.Mesh(
     new THREE.RingGeometry(45, 48.5, 64),
     new THREE.MeshStandardMaterial({ color: 0xe7d3a1, roughness: 1 }),
@@ -176,6 +198,24 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
   sandRim.position.y = 0.005;
   sandRim.receiveShadow = true;
   scene.add(sandRim);
+
+  // 9.1: LAUT di sekeliling pulau — cakram air biru besar (r 200, di
+  // bawah tanah y -0,05 supaya tidak z-fighting dengan tanah y 0).
+  // Radius 200 > fog far 180: tepi laut memudar penuh ke kabut seperti
+  // cakrawala di gambar konsep. 1 mesh, tanpa bayangan, denyut opacity
+  // sangat pelan di loop animasi (lihat SEA_SPEC).
+  const sea = new THREE.Mesh(
+    new THREE.CircleGeometry(SEA_SPEC.radius, 64),
+    new THREE.MeshStandardMaterial({
+      color: SEA_SPEC.color,
+      roughness: 0.6,
+      transparent: true,
+      opacity: SEA_SPEC.opacityBase,
+    }),
+  );
+  sea.rotation.x = -Math.PI / 2;
+  sea.position.y = SEA_SPEC.y;
+  scene.add(sea);
 
   // Phase 9: grid disamarkan (opacity 0,35 -> 0,12, warna lebih pudar)
   // supaya tanah terbaca sebagai pulau kampung, bukan lapangan grafik.
@@ -444,6 +484,9 @@ export function createWorld(container: HTMLDivElement, options: WorldOptions): W
     // 8.2: posisi matahari ikut bergeser (sore = rendah di barat = senja).
     sun.position.lerp(envTargets.sunPos, k);
     hemi.intensity += (envTargets.hemiIntensity - hemi.intensity) * k;
+    // 9.1: denyut laut sangat pelan (opacity 0,91–0,99, periode 40 dtk).
+    (sea.material as THREE.MeshStandardMaterial).opacity =
+      SEA_SPEC.opacityBase + SEA_SPEC.opacityAmp * Math.sin((t * Math.PI * 2) / SEA_SPEC.pulsePeriodSeconds);
     // Hujan: titik jatuh, berputar ke atas saat menyentuh tanah.
     rain.visible = currentWeather === 'hujan';
     if (rain.visible) {
